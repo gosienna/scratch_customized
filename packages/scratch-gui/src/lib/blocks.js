@@ -3,8 +3,12 @@
  * @param {VirtualMachine} vm - The scratch vm
  * @returns {ScratchBlocks} ScratchBlocks connected with the vm
  */
+import {setupCustomBlocks} from './customized/blocks';
+
 export default function (vm) {
     const ScratchBlocks = require('scratch-blocks');
+    // CUSTOM: editor-only blocks and Custom-mode variable display.
+    setupCustomBlocks(ScratchBlocks);
 
     const jsonForMenuBlock = function (name, menuOptionsFn, category, start) {
         return {

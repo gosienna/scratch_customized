@@ -8,6 +8,8 @@ import customProceduresReducer, {customProceduresInitialState} from './custom-pr
 import blockDragReducer, {blockDragInitialState} from './block-drag';
 import dynamicAssetsReducer, {dynamicAssetsInitialState} from './dynamic-assets';
 import editorTabReducer, {editorTabInitialState} from './editor-tab';
+// CUSTOM
+import editorModeReducer, {editorModeInitialState} from './editor-mode';
 import hoveredTargetReducer, {hoveredTargetInitialState} from './hovered-target';
 import menuReducer, {menuInitialState} from './menus';
 import micIndicatorReducer, {micIndicatorInitialState} from './mic-indicator';
@@ -57,6 +59,7 @@ const buildInitialState = (config: GUIConfig) => ({
     customProcedures: customProceduresInitialState,
     dynamicAssets: dynamicAssetsInitialState,
     editorTab: editorTabInitialState,
+    editorMode: editorModeInitialState(),
     mode: modeInitialState,
     hoveredTarget: hoveredTargetInitialState,
     stageSize: stageSizeInitialState,
@@ -167,6 +170,7 @@ const guiReducer = combineReducers({
     dynamicAssets: dynamicAssetsReducer,
     customProcedures: customProceduresReducer,
     editorTab: editorTabReducer,
+    editorMode: editorModeReducer,
     mode: modeReducer,
     hoveredTarget: hoveredTargetReducer,
     stageSize: stageSizeReducer,

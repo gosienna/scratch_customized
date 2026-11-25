@@ -40,6 +40,8 @@ import {
     activateTab,
     SOUNDS_TAB_INDEX
 } from '../reducers/editor-tab';
+// CUSTOM
+import {makeVariablesCategory, setupWorkspace} from '../lib/customized/blocks';
 
 const addFunctionListener = (object, property, callback) => {
     const oldFn = object[property];
@@ -123,9 +125,11 @@ class Blocks extends React.Component {
             }
         );
         this.workspace = this.ScratchBlocks.inject(this.blocks, workspaceConfig);
+        // CUSTOM: scope colors, and a Variables palette grouped by scope in Custom mode.
+        setupWorkspace(this.ScratchBlocks, this.workspace);
         this.workspace.registerToolboxCategoryCallback(
             'VARIABLE',
-            this.ScratchBlocks.ScratchVariables.getVariablesCategory
+            makeVariablesCategory(this.ScratchBlocks)
         );
         this.workspace.registerToolboxCategoryCallback(
             'PROCEDURE',

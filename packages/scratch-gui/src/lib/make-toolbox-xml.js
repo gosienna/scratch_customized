@@ -1,5 +1,7 @@
 import * as ScratchBlocks from 'scratch-blocks';
 import {defaultColors} from './settings/color-mode';
+// CUSTOM
+import {getEditorMode, usesCustomBlocks} from './customized/editor-mode';
 
 const categorySeparator = '<sep gap="36"/>';
 
@@ -518,6 +520,7 @@ const sensing = function (isInitialSetup, isStage, targetId, colors) {
             </value>
         </block>
         <block type="sensing_mousedown"/>
+        ${usesCustomBlocks(getEditorMode()) ? '<block type="sensing_mouseup"/>' : ''}
         <block type="sensing_mousex"/>
         <block type="sensing_mousey"/>
         ${isStage ? '' : `
@@ -737,6 +740,11 @@ const operators = function (isInitialSetup, isStage, targetId, colors) {
                 </shadow>
             </value>
         </block>
+        ${usesCustomBlocks(getEditorMode()) ? `
+            ${blockSeparator}
+            <block type="operator_expression"/>
+            <block type="operator_condition"/>
+        ` : ''}
         ${categorySeparator}
     </category>
     `;
