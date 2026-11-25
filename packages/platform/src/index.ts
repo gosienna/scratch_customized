@@ -1,0 +1,16 @@
+export * from './compat/opcodes'
+export { assertStockProject, CompatibilityError, effectiveExpression, lowerProject } from './compat/lower'
+export type { TransformContext } from './compat/lower'
+export { raiseProject } from './compat/raise'
+export type { RaiseOptions } from './compat/raise'
+export { createProjectTransforms } from './compat/transforms'
+export type { ProjectTransformOptions } from './compat/transforms'
+
+export { parseExpression, printExpression, isBooleanNode, namesIn, formatName, ExprSyntaxError } from './expr/syntax'
+export type { ExprNode } from './expr/syntax'
+export { resolveName } from './expr/scope'
+export type { ExprScope, ResolvedName, ParamType } from './expr/scope'
+export { FUNCTIONS } from './expr/ops'
+
+export * from './local-vars'
+export { createPrimitives, installPrimitives } from './runtime/primitives'

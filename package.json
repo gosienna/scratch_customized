@@ -21,6 +21,7 @@
     "packages/scratch-paint",
     "packages/scratch-render",
     "packages/scratch-vm",
+    "packages/platform",
     "packages/scratch-gui",
     "packages/scratch-media-lib-scripts"
   ],
