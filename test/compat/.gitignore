@@ -1,0 +1,5 @@
+node_modules/
+.official-gui/
+.outputs/
+test-results/
+playwright-report/

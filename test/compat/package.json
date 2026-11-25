@@ -1,0 +1,20 @@
+{
+  "name": "scratch-customized-compat-tests",
+  "private": true,
+  "description": "Checks that projects saved by scratch_customized load and behave the same in unmodified official Scratch.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "build:official-gui": "scripts/build-official-gui.sh",
+    "test": "vitest run",
+    "test:gui": "playwright test",
+    "write-outputs": "tsx scripts/write-sb3-outputs.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@scratch/scratch-vm": "15.3.0",
+    "jszip": "3.10.2",
+    "tsx": "4.23.15",
+    "vitest": "4.1.12"
+  }
+}

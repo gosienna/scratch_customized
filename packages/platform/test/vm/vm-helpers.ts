@@ -1,8 +1,11 @@
 /** Helpers for tests that run projects in the in-repo scratch-vm (Node, no renderer). */
 import { createRequire } from 'node:module'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const vmDir = path.resolve(__dirname, '../../../scratch-vm')
+const here = path.dirname(fileURLToPath(import.meta.url))
+
+const vmDir = path.resolve(here, '../../../scratch-vm')
 export const requireFromVm = createRequire(path.join(vmDir, 'package.json'))
 
 export type VM = any
