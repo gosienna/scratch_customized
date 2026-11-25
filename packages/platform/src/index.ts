@@ -21,3 +21,6 @@ export { createFolderStore } from './storage/folder-store'
 export type { FolderStore } from './storage/folder-store'
 export { createDriveStore, googleIdentityTokenProvider } from './storage/drive-store'
 export type { AccessToken, TokenProvider } from './storage/drive-store'
+
+export { applyText, targetToText, TextSyntaxError } from './text'
+export type { TextDialect } from './text'

@@ -35,6 +35,18 @@ export interface LowerContext {
   blocks: BlockMap
   scope: ExprScope
   newId: () => string
+  /**
+   * Place a `reporter` node (text mode only). Receives the same arguments as placeInSlot; returns the input, or
+   * undefined for an empty boolean slot.
+   */
+  placeReporter?: (
+    node: Extract<ExprNode, { kind: 'reporter' }>,
+    parentId: string,
+    slot: Slot,
+    rootId?: string,
+  ) => SerializedInput | undefined
+  /** Called for a name that is not a variable or parameter; by default it is saved as 0. */
+  onUnknownName?: (name: string) => void
 }
 
 const isNumberPrimitive = (type: number) => type >= 4 && type <= 8
@@ -107,7 +119,8 @@ const placeLiteral = (
   const shadow = slot.shadow
   if (Array.isArray(shadow)) {
     const type = shadow[0]
-    const fits = type === TEXT_PRIMITIVE || (isNumberPrimitive(type) && NUMBER_LITERAL_RE.test(text))
+    // An empty field is valid in every slot (Scratch reads it as 0 or as empty text).
+    const fits = type === TEXT_PRIMITIVE || (isNumberPrimitive(type) && (text === '' || NUMBER_LITERAL_RE.test(text)))
     if (fits) return [INPUT_SAME_BLOCK_SHADOW, [type, text] as CompressedPrimitive]
     if (type === COLOR_PICKER_PRIMITIVE && /^#[0-9a-fA-F]{6}$/.test(text)) {
       return [INPUT_SAME_BLOCK_SHADOW, [type, text] as CompressedPrimitive]
@@ -130,6 +143,10 @@ export const placeInSlot = (
   ctx: LowerContext,
   rootId?: string,
 ): SerializedInput | undefined => {
+  if (node.kind === 'reporter') {
+    if (!ctx.placeReporter) throw new ExprTypeError(`Unknown function "${node.name}"`)
+    return ctx.placeReporter(node, parentId, slot, rootId)
+  }
   if (slot.kind === 'boolean') {
     if (isBooleanNode(node)) return [INPUT_BLOCK_NO_SHADOW, buildOperator(node, parentId, ctx, rootId)]
     if (node.kind === 'name') {
@@ -151,6 +168,7 @@ export const placeInSlot = (
       if (resolved.kind === 'param') {
         return reporterInput(buildParamReporter(node.name, resolved.type === 'boolean', parentId, ctx, rootId), slot)
       }
+      ctx.onUnknownName?.(node.name)
       return placeLiteral('0', parentId, slot, ctx, rootId)
     }
     default:

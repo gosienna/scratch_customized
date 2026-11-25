@@ -2,9 +2,13 @@
  * Tokenizer, parser and printer for typed expressions such as `(var1 + var2) / 2`.
  *
  * Grammar, from loosest to tightest binding:
- *   or  →  and  →  not  →  comparison (< > = != <= >=)  →  + -  →  * / % mod  →  unary -  →  atom
+ *   or  →  and  →  not  →  comparison (< > = != <= >=)  →  + -  →  * / % mod  →  unary - (and JS !)  →  atom
  * Atoms are numbers, quoted strings, names, `[names with spaces]`, function calls and parenthesized expressions.
  * `!=`, `<=` and `>=` are written as `not (...)` in blocks, because Scratch has no such operators.
+ *
+ * Three dialects share the grammar and differ only in spelling: `scratch` (Custom-mode expression blocks:
+ * `=`, `mod`, `and`/`or`/`not`), `python` (`==`, `%`, `and`/`or`/`not`) and `javascript` (`==`, `%`, `&&`/`||`
+ * and a tightly binding `!`). Every dialect reads the other spellings too.
  */
 import {
   BINARY_OPERATORS,
@@ -18,6 +22,8 @@ import {
   RESERVED_WORDS,
 } from './ops'
 
+export type ExprDialect = 'scratch' | 'python' | 'javascript'
+
 export type ExprNode =
   | { kind: 'number'; text: string }
   | { kind: 'string'; value: string }
@@ -25,6 +31,8 @@ export type ExprNode =
   | { kind: 'binary'; op: BinaryOperator; left: ExprNode; right: ExprNode }
   | { kind: 'not'; operand: ExprNode }
   | { kind: 'call'; fn: FunctionName; args: ExprNode[] }
+  /** A call to a non-operator reporter, e.g. `x_position()` (text mode only). */
+  | { kind: 'reporter'; name: string; args: ExprNode[] }
 
 export class ExprSyntaxError extends Error {
   readonly position: number
@@ -34,6 +42,21 @@ export class ExprSyntaxError extends Error {
     this.name = 'ExprSyntaxError'
     this.position = position
   }
+}
+
+export interface ParseOptions {
+  dialect?: ExprDialect
+  /**
+   * Accept calls to functions other than the operator functions, as `reporter` nodes. The function receives the
+   * name as written and returns the canonical name, or undefined if there is no such reporter.
+   */
+  reporterName?: (name: string) => string | undefined
+}
+
+export interface PrintOptions {
+  dialect?: ExprDialect
+  /** How to write a reporter's canonical name (e.g. camelCase in JavaScript). */
+  reporterName?: (name: string) => string
 }
 
 type TokenType = 'number' | 'string' | 'name' | 'op' | 'eof'
@@ -46,16 +69,17 @@ interface Token {
 
 const NUMBER_RE = /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/
 const NAME_RE = /^[\p{L}_][\p{L}\p{N}_]*/u
-const OPERATOR_RE = /^(?:==|!=|<=|>=|&&|\|\||[+\-*/%()<>=,!≠≤≥])/
+const OPERATOR_RE = /^(?:===|!==|==|!=|<=|>=|&&|\|\||[+\-*/%()<>=,!≠≤≥])/
 
 /** A number literal exactly as Scratch's number fields accept it. */
 export const NUMBER_LITERAL_RE = /^-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/
 
 const OPERATOR_ALIASES: Record<string, string> = {
+  '===': '=',
   '==': '=',
+  '!==': '!=',
   '&&': 'and',
   '||': 'or',
-  '!': 'not',
   '≠': '!=',
   '≤': '<=',
   '≥': '>=',
@@ -122,9 +146,11 @@ const tokenize = (source: string): Token[] => {
 class Parser {
   private index = 0
   private readonly tokens: Token[]
+  private readonly options: ParseOptions
 
-  constructor(tokens: Token[]) {
+  constructor(tokens: Token[], options: ParseOptions) {
     this.tokens = tokens
+    this.options = options
   }
 
   parse(): ExprNode {
@@ -132,6 +158,10 @@ class Parser {
     const token = this.peek()
     if (token.type !== 'eof') throw new ExprSyntaxError(`Unexpected "${token.text}"`, token.position)
     return node
+  }
+
+  private get jsNot(): boolean {
+    return this.options.dialect === 'javascript'
   }
 
   private peek(): Token {
@@ -169,7 +199,10 @@ class Parser {
   }
 
   private parseNot(): ExprNode {
-    if (this.acceptOp('not')) return { kind: 'not', operand: this.parseNot() }
+    // In JavaScript `!` binds tightly and is read in parseUnary instead.
+    if (this.acceptOp('not') ?? (this.jsNot ? undefined : this.acceptOp('!'))) {
+      return { kind: 'not', operand: this.parseNot() }
+    }
     return this.parseComparison()
   }
 
@@ -207,11 +240,13 @@ class Parser {
   private parseUnary(): ExprNode {
     if (this.acceptOp('-')) {
       const operand = this.parseUnary()
-      if (operand.kind === 'number' && !operand.text.startsWith('-'))
+      if (operand.kind === 'number' && !operand.text.startsWith('-')) {
         return { kind: 'number', text: `-${operand.text}` }
+      }
       return { kind: 'binary', op: '-', left: { kind: 'number', text: '0' }, right: operand }
     }
     if (this.acceptOp('+')) return this.parseUnary()
+    if (this.jsNot && this.acceptOp('!')) return { kind: 'not', operand: this.parseUnary() }
     return this.parseAtom()
   }
 
@@ -232,16 +267,24 @@ class Parser {
     throw new ExprSyntaxError(`Unexpected "${token.text}"`, token.position)
   }
 
+  private parseArguments(): ExprNode[] {
+    const args: ExprNode[] = []
+    if (this.acceptOp(')')) return args
+    do args.push(this.parseOr())
+    while (this.acceptOp(','))
+    if (!this.acceptOp(')')) throw new ExprSyntaxError('Missing closing ) after arguments', this.peek().position)
+    return args
+  }
+
   private parseCall(nameToken: Token): ExprNode {
     const fn = nameToken.text
-    if (!isFunctionName(fn)) throw new ExprSyntaxError(`Unknown function "${fn}"`, nameToken.position)
-    const spec: OperatorSpec = FUNCTIONS[fn]
-    const args: ExprNode[] = []
-    if (!this.acceptOp(')')) {
-      do args.push(this.parseOr())
-      while (this.acceptOp(','))
-      if (!this.acceptOp(')')) throw new ExprSyntaxError('Missing closing ) after arguments', this.peek().position)
+    if (!isFunctionName(fn)) {
+      const reporter = this.options.reporterName?.(fn)
+      if (reporter === undefined) throw new ExprSyntaxError(`Unknown function "${fn}"`, nameToken.position)
+      return { kind: 'reporter', name: reporter, args: this.parseArguments() }
     }
+    const spec: OperatorSpec = FUNCTIONS[fn]
+    const args = this.parseArguments()
     if (args.length !== spec.inputs.length) {
       throw new ExprSyntaxError(
         `${fn}() takes ${spec.inputs.length} argument${spec.inputs.length === 1 ? '' : 's'}`,
@@ -252,77 +295,88 @@ class Parser {
   }
 }
 
-export const parseExpression = (source: string): ExprNode => new Parser(tokenize(source)).parse()
+export const parseExpression = (source: string, options: ParseOptions = {}): ExprNode =>
+  new Parser(tokenize(source), options).parse()
 
 const BARE_NAME_RE = /^[\p{L}_][\p{L}\p{N}_]*$/u
 
-/**
- * Print a name bare when the parser would read it back as the same name, otherwise as `[name]`.
- */
+/** Print a name bare when the parser would read it back as the same name, otherwise as `[name]`. */
 export const formatName = (name: string): string | undefined => {
   if (BARE_NAME_RE.test(name) && !RESERVED_WORDS.has(name)) return name
   if (name.includes(']') || name.trim() !== name || !name) return undefined
   return `[${name}]`
 }
 
-const quote = (value: string): string => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+export const quoteString = (value: string): string => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 
-const precedenceOf = (node: ExprNode): number => {
+const OPERATOR_TEXT: Record<ExprDialect, Partial<Record<BinaryOperator, string>>> = {
+  scratch: { '%': 'mod' },
+  python: { '=': '==' },
+  javascript: { '=': '==', and: '&&', or: '||' },
+}
+
+const precedenceOf = (node: ExprNode, dialect: ExprDialect): number => {
   if (node.kind === 'binary') return PRECEDENCE[node.op]
-  if (node.kind === 'not') return PRECEDENCE.not
+  // JavaScript's `!` is printed with a parenthesized operand, so it reads as an atom.
+  if (node.kind === 'not') return dialect === 'javascript' ? Infinity : PRECEDENCE.not
   return Infinity
 }
 
 /**
- * Print an expression so that parsing the text gives back the same tree. Returns undefined if some name
- * cannot be written in expression syntax.
+ * Print an expression so that parsing the text (in the same dialect) gives back the same tree. Returns undefined
+ * if some name cannot be written in expression syntax.
  */
-export const printExpression = (node: ExprNode): string | undefined => {
+export const printExpression = (node: ExprNode, options: PrintOptions = {}): string | undefined => {
+  const dialect = options.dialect ?? 'scratch'
+  const print = (child: ExprNode) => printExpression(child, options)
   switch (node.kind) {
     case 'number':
       return node.text
     case 'string':
-      return quote(node.value)
+      return quoteString(node.value)
     case 'name':
       return formatName(node.name)
     case 'not': {
-      const operand = printExpression(node.operand)
+      const operand = print(node.operand)
       if (operand === undefined) return undefined
-      return precedenceOf(node.operand) < PRECEDENCE.not ? `not (${operand})` : `not ${operand}`
+      if (dialect === 'javascript') {
+        return precedenceOf(node.operand, dialect) === Infinity ? `!${operand}` : `!(${operand})`
+      }
+      return precedenceOf(node.operand, dialect) < PRECEDENCE.not ? `not (${operand})` : `not ${operand}`
     }
-    case 'call': {
-      const args = node.args.map(printExpression)
+    case 'call':
+    case 'reporter': {
+      const args = node.args.map(print)
       if (args.some((arg) => arg === undefined)) return undefined
-      return `${node.fn}(${args.join(', ')})`
+      const name = node.kind === 'call' ? node.fn : (options.reporterName?.(node.name) ?? node.name)
+      return `${name}(${args.join(', ')})`
     }
     case 'binary': {
       const own = PRECEDENCE[node.op]
-      const left = printExpression(node.left)
-      const right = printExpression(node.right)
+      const left = print(node.left)
+      const right = print(node.right)
       if (left === undefined || right === undefined) return undefined
       // Left-associative: the left side needs parentheses only when it binds looser; the right side also when equal.
       // A negative number on the right would read as subtraction of a positive one, so it is parenthesized too.
-      const leftText = precedenceOf(node.left) < own ? `(${left})` : left
+      const leftText = precedenceOf(node.left, dialect) < own ? `(${left})` : left
       const rightNeedsParens =
-        precedenceOf(node.right) <= own || (node.right.kind === 'number' && node.right.text.startsWith('-'))
+        precedenceOf(node.right, dialect) <= own || (node.right.kind === 'number' && node.right.text.startsWith('-'))
       const rightText = rightNeedsParens ? `(${right})` : right
-      const opText = node.op === '%' ? 'mod' : node.op
-      return `${leftText} ${opText} ${rightText}`
+      return `${leftText} ${OPERATOR_TEXT[dialect][node.op] ?? node.op} ${rightText}`
     }
   }
 }
 
 /**
- * True if the operator produces a true/false value.
+ * True if the node produces a true/false value. `isBooleanReporter` answers for reporter nodes.
  */
-export const isBooleanNode = (node: ExprNode): boolean =>
+export const isBooleanNode = (node: ExprNode, isBooleanReporter?: (name: string) => boolean): boolean =>
   node.kind === 'not' ||
   (node.kind === 'binary' && BINARY_OPERATORS[node.op].boolean) ||
-  (node.kind === 'call' && FUNCTIONS[node.fn].boolean)
+  (node.kind === 'call' && FUNCTIONS[node.fn].boolean) ||
+  (node.kind === 'reporter' && Boolean(isBooleanReporter?.(node.name)))
 
-/**
- * Every name the expression refers to, in order of first appearance.
- */
+/** Every name the expression refers to, in order of first appearance. */
 export const namesIn = (node: ExprNode, into: string[] = []): string[] => {
   if (node.kind === 'name' && !into.includes(node.name)) into.push(node.name)
   if (node.kind === 'binary') {
@@ -330,7 +384,7 @@ export const namesIn = (node: ExprNode, into: string[] = []): string[] => {
     namesIn(node.right, into)
   }
   if (node.kind === 'not') namesIn(node.operand, into)
-  if (node.kind === 'call') node.args.forEach((arg) => namesIn(arg, into))
+  if (node.kind === 'call' || node.kind === 'reporter') node.args.forEach((arg) => namesIn(arg, into))
   return into
 }
 
