@@ -32,6 +32,9 @@ const webConfig = baseConfig.clone()
                 type: 'umd2'
             },
             path: path.resolve(__dirname, 'dist', 'web'),
+            // CUSTOM: load the fetch worker next to the script that loaded it, so the editor also works
+            // under a sub-path (e.g. GitHub Pages' /<repository>/) instead of only at a site's root.
+            publicPath: 'auto',
             clean: false
         }
     });

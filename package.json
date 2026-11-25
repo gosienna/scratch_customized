@@ -27,6 +27,7 @@
   ],
   "scripts": {
     "build": "cross-env NODE_ENV=production npm run --workspaces build",
+    "build:pages": "scripts/build-pages.sh",
     "clean": "npm run --workspaces clean",
     "prepare": "husky install",
     "refresh-gh-workflow": "ts-node scripts/update-gha-workflows.ts",
