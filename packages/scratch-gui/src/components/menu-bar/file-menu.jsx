@@ -15,6 +15,8 @@ import useMenuNavigation from '../../hooks/use-menu-navigation';
 import sharedMessages from '../../lib/shared-messages';
 
 import {saveProjectAsCopy} from '../../reducers/project-state';
+// CUSTOM
+import {openProjectStorage} from '../../reducers/project-storage';
 
 const fileMenu = defineMessage({
     id: 'gui.aria.fileMenu',
@@ -33,6 +35,8 @@ const FileMenu = ({
     onClickRemix,
     onStartSelectingFileUpload,
     getSaveToComputerHandler,
+    onClickOpenFromStorage,
+    onClickSaveToStorage,
     remixMessage,
     depth
 }) => {
@@ -140,6 +144,30 @@ const FileMenu = ({
                 )}
                 <MenuSection>
                     <MenuItem
+                        onClick={onClickOpenFromStorage}
+                        isDataMenuItem
+                        onParentKeyDown={handleKeyDownOpenMenu}
+                    >
+                        <FormattedMessage
+                            defaultMessage="Open from browser, folder or Drive…"
+                            description="Menu bar item for opening a project from project storage"
+                            id="gui.customized.menuBar.openFromStorage"
+                        />
+                    </MenuItem>
+                    <MenuItem
+                        onClick={onClickSaveToStorage}
+                        isDataMenuItem
+                        onParentKeyDown={handleKeyDownOpenMenu}
+                    >
+                        <FormattedMessage
+                            defaultMessage="Save to browser, folder or Drive…"
+                            description="Menu bar item for saving a project to project storage"
+                            id="gui.customized.menuBar.saveToStorage"
+                        />
+                    </MenuItem>
+                </MenuSection>
+                <MenuSection>
+                    <MenuItem
                         onClick={onStartSelectingFileUpload}
                         isDataMenuItem
                         onParentKeyDown={handleKeyDownOpenMenu}
@@ -177,6 +205,8 @@ FileMenu.propTypes = {
     onClickRemix: PropTypes.func,
     onClickNew: PropTypes.func.isRequired,
     getSaveToComputerHandler: PropTypes.func.isRequired,
+    onClickOpenFromStorage: PropTypes.func.isRequired,
+    onClickSaveToStorage: PropTypes.func.isRequired,
     remixMessage: PropTypes.node,
     depth: PropTypes.number
 };
@@ -186,7 +216,9 @@ const mapStateToProps = state => ({
 });
 
 const mapDispatchToProps = dispatch => ({
-    onClickSaveAsCopy: () => dispatch(saveProjectAsCopy())
+    onClickSaveAsCopy: () => dispatch(saveProjectAsCopy()),
+    onClickOpenFromStorage: () => dispatch(openProjectStorage('open')),
+    onClickSaveToStorage: () => dispatch(openProjectStorage('save'))
 });
 
 export default connect(

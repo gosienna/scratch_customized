@@ -48,6 +48,8 @@ import {setTheme} from '../../reducers/settings.js';
 import {PLATFORM} from '../../lib/platform.js';
 import {MenuRefProvider} from '../../contexts/menu-ref-context.jsx';
 import {ModalFocusProvider} from '../../contexts/modal-focus-context.jsx';
+// CUSTOM
+import ProjectStorageModal from '../../containers/customized/project-storage-modal.jsx';
 
 const ariaMessages = defineMessages({
     menuBar: {
@@ -324,6 +326,8 @@ const GUIComponent = props => {
                         isOpen={debugModalVisible}
                         onClose={onCloseDebugModal}
                     />}
+                    {/* CUSTOM */}
+                    <ProjectStorageModal />
                     {backdropLibraryVisible ? (
                         <BackdropLibrary
                             vm={vm}

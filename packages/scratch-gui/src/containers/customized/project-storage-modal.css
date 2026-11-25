@@ -1,0 +1,106 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.modal {
+    width: 40rem;
+}
+
+.body {
+    background: $ui-white;
+    padding: 1rem 1.5rem 1.5rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.tab, .active-tab {
+    padding: 0.4rem 0.9rem;
+    border-radius: 1rem;
+    border: 1px solid $ui-black-transparent;
+    background: $ui-white;
+    color: $text-primary;
+    cursor: pointer;
+}
+
+.active-tab {
+    background: $looks-secondary;
+    border-color: $looks-secondary;
+    color: $ui-white;
+}
+
+.hint {
+    color: $text-primary-transparent;
+    font-size: 0.8rem;
+}
+
+.project-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+}
+
+.project-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid $ui-black-transparent;
+}
+
+.project-name {
+    flex: 1;
+    font-weight: bold;
+}
+
+.project-meta {
+    color: $text-primary-transparent;
+    font-size: 0.75rem;
+}
+
+.save-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.save-row label {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    font-size: 0.8rem;
+}
+
+.save-row input {
+    margin-top: 0.25rem;
+    padding: 0.4rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.25rem;
+}
+
+.primary-button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: none;
+    background: $looks-secondary;
+    color: $ui-white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.primary-button:disabled {
+    opacity: 0.5;
+}
+
+.status {
+    color: $extensions-primary;
+}
+
+.error {
+    color: $error-primary;
+}

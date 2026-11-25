@@ -10,6 +10,7 @@ import dynamicAssetsReducer, {dynamicAssetsInitialState} from './dynamic-assets'
 import editorTabReducer, {editorTabInitialState} from './editor-tab';
 // CUSTOM
 import editorModeReducer, {editorModeInitialState} from './editor-mode';
+import projectStorageReducer, {projectStorageInitialState} from './project-storage';
 import hoveredTargetReducer, {hoveredTargetInitialState} from './hovered-target';
 import menuReducer, {menuInitialState} from './menus';
 import micIndicatorReducer, {micIndicatorInitialState} from './mic-indicator';
@@ -60,6 +61,7 @@ const buildInitialState = (config: GUIConfig) => ({
     dynamicAssets: dynamicAssetsInitialState,
     editorTab: editorTabInitialState,
     editorMode: editorModeInitialState(),
+    projectStorage: projectStorageInitialState,
     mode: modeInitialState,
     hoveredTarget: hoveredTargetInitialState,
     stageSize: stageSizeInitialState,
@@ -171,6 +173,7 @@ const guiReducer = combineReducers({
     customProcedures: customProceduresReducer,
     editorTab: editorTabReducer,
     editorMode: editorModeReducer,
+    projectStorage: projectStorageReducer,
     mode: modeReducer,
     hoveredTarget: hoveredTargetReducer,
     stageSize: stageSizeReducer,

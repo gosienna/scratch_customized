@@ -14,3 +14,10 @@ export { FUNCTIONS } from './expr/ops'
 
 export * from './local-vars'
 export { createPrimitives, installPrimitives } from './runtime/primitives'
+
+export * from './storage/types'
+export { createIndexedDbStore, getSetting, setSetting } from './storage/indexeddb-store'
+export { createFolderStore } from './storage/folder-store'
+export type { FolderStore } from './storage/folder-store'
+export { createDriveStore, googleIdentityTokenProvider } from './storage/drive-store'
+export type { AccessToken, TokenProvider } from './storage/drive-store'
