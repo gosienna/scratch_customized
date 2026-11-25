@@ -43,6 +43,10 @@
     "vitest": "4.1.12"
   },
   "dependencies": {
-    "idb": "8.0.4"
+    "@isomorphic-git/lightning-fs": "4.10.5",
+    "diff": "9.0.0",
+    "idb": "8.0.4",
+    "isomorphic-git": "1.44.19",
+    "jszip": "3.10.2"
   }
 }

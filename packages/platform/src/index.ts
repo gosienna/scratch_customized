@@ -24,3 +24,18 @@ export type { AccessToken, TokenProvider } from './storage/drive-store'
 
 export { applyText, targetToText, TextSyntaxError } from './text'
 export type { TextDialect } from './text'
+
+export {
+  commitProject,
+  createBranch,
+  currentBranch,
+  diffVersions,
+  listBranches,
+  listVersions,
+  openProjectRepo,
+  pushToRemote,
+  readVersion,
+  switchBranch,
+} from './vcs/repo'
+export type { Author, ProjectRepo, RemoteOptions, Version, VersionDiff } from './vcs/repo'
+export { getBrowserGitFs, repoDirFor } from './vcs/browser-fs'
