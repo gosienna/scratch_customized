@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback} from 'react';
 import styles from './menu-bar.css';
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
@@ -37,6 +37,7 @@ const FileMenu = ({
     getSaveToComputerHandler,
     onClickOpenFromStorage,
     onClickSaveToStorage,
+    onClickHistory,
     remixMessage,
     depth
 }) => {
@@ -53,6 +54,20 @@ const FileMenu = ({
         depth,
         isRtl
     });
+
+    // CUSTOM: these items open dialogs, so the menu closes first (it would otherwise keep the keyboard focus).
+    const handleOpenFromStorage = useCallback(() => {
+        handleOnClose();
+        onClickOpenFromStorage();
+    }, [handleOnClose, onClickOpenFromStorage]);
+    const handleSaveToStorage = useCallback(() => {
+        handleOnClose();
+        onClickSaveToStorage();
+    }, [handleOnClose, onClickSaveToStorage]);
+    const handleHistory = useCallback(() => {
+        handleOnClose();
+        onClickHistory();
+    }, [handleOnClose, onClickHistory]);
 
     const saveNowMessage = (
         <FormattedMessage
@@ -144,7 +159,7 @@ const FileMenu = ({
                 )}
                 <MenuSection>
                     <MenuItem
-                        onClick={onClickOpenFromStorage}
+                        onClick={handleOpenFromStorage}
                         isDataMenuItem
                         onParentKeyDown={handleKeyDownOpenMenu}
                     >
@@ -155,7 +170,7 @@ const FileMenu = ({
                         />
                     </MenuItem>
                     <MenuItem
-                        onClick={onClickSaveToStorage}
+                        onClick={handleSaveToStorage}
                         isDataMenuItem
                         onParentKeyDown={handleKeyDownOpenMenu}
                     >
@@ -163,6 +178,17 @@ const FileMenu = ({
                             defaultMessage="Save to browser, folder or Drive…"
                             description="Menu bar item for saving a project to project storage"
                             id="gui.customized.menuBar.saveToStorage"
+                        />
+                    </MenuItem>
+                    <MenuItem
+                        onClick={handleHistory}
+                        isDataMenuItem
+                        onParentKeyDown={handleKeyDownOpenMenu}
+                    >
+                        <FormattedMessage
+                            defaultMessage="Version history…"
+                            description="Menu bar item for the project's version history"
+                            id="gui.customized.menuBar.history"
                         />
                     </MenuItem>
                 </MenuSection>
@@ -207,6 +233,7 @@ FileMenu.propTypes = {
     getSaveToComputerHandler: PropTypes.func.isRequired,
     onClickOpenFromStorage: PropTypes.func.isRequired,
     onClickSaveToStorage: PropTypes.func.isRequired,
+    onClickHistory: PropTypes.func.isRequired,
     remixMessage: PropTypes.node,
     depth: PropTypes.number
 };
@@ -218,7 +245,8 @@ const mapStateToProps = state => ({
 const mapDispatchToProps = dispatch => ({
     onClickSaveAsCopy: () => dispatch(saveProjectAsCopy()),
     onClickOpenFromStorage: () => dispatch(openProjectStorage('open')),
-    onClickSaveToStorage: () => dispatch(openProjectStorage('save'))
+    onClickSaveToStorage: () => dispatch(openProjectStorage('save')),
+    onClickHistory: () => dispatch(openProjectStorage('history'))
 });
 
 export default connect(

@@ -324,7 +324,7 @@ ProjectStorageModal.propTypes = {
 };
 
 /* eslint-disable react/prop-types -- props of the connected wrapper, passed straight through. */
-const ProjectStorageModalWrapper = ({purpose, ...props}) => (purpose ? (
+const ProjectStorageModalWrapper = ({purpose, ...props}) => (purpose === 'open' || purpose === 'save' ? (
     <ProjectStorageModal
         purpose={purpose}
         {...props}

@@ -4,7 +4,7 @@ const CLOSE_DIALOG = 'scratch-gui/project-storage/CLOSE_DIALOG';
 const SET_CURRENT = 'scratch-gui/project-storage/SET_CURRENT';
 
 const initialState = {
-    /** null when closed, otherwise 'open' or 'save'. */
+    /** null when closed, otherwise 'open' or 'save' (the storage dialog) or 'history' (version history). */
     dialog: null,
     /** {kind, id, name} of the stored copy of the current project, or null. */
     current: null
@@ -25,7 +25,7 @@ const reducer = function (state, action) {
 };
 
 /**
- * @param {'open'|'save'} purpose - whether the dialog opens or saves a project.
+ * @param {'open'|'save'|'history'} purpose - which dialog to open.
  * @returns {object} the action.
  */
 const openProjectStorage = purpose => ({type: OPEN_DIALOG, purpose});

@@ -78,8 +78,12 @@ const baseConfig = new ScratchWebpackConfigBuilder(
         'process.env.GTM_ENV_AUTH': `"${process.env.GTM_ENV_AUTH || ''}"`,
         'process.env.GTM_ID': process.env.GTM_ID ? `"${process.env.GTM_ID}"` : null,
         // CUSTOM: OAuth client ID for Google Drive storage (public; empty disables Drive).
-        'process.env.GOOGLE_CLIENT_ID': JSON.stringify(process.env.GOOGLE_CLIENT_ID || '')
+        'process.env.GOOGLE_CLIENT_ID': JSON.stringify(process.env.GOOGLE_CLIENT_ID || ''),
+        // CUSTOM: CORS proxy for pushing version history to GitHub/GitLab (empty: ask the user).
+        'process.env.GIT_CORS_PROXY': JSON.stringify(process.env.GIT_CORS_PROXY || '')
     }))
+    // CUSTOM: isomorphic-git (version history) uses Node's global Buffer.
+    .addPlugin(new webpack.ProvidePlugin({Buffer: ['buffer', 'Buffer']}))
     .addPlugin(new CopyWebpackPlugin({
         patterns: [
             {

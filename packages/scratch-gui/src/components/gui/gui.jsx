@@ -51,6 +51,7 @@ import {ModalFocusProvider} from '../../contexts/modal-focus-context.jsx';
 // CUSTOM
 import ProjectStorageModal from '../../containers/customized/project-storage-modal.jsx';
 import TextCodePanel from '../../containers/customized/text-code-panel.jsx';
+import HistoryModal from '../../containers/customized/history-modal.jsx';
 
 const ariaMessages = defineMessages({
     menuBar: {
@@ -329,6 +330,7 @@ const GUIComponent = props => {
                     />}
                     {/* CUSTOM */}
                     <ProjectStorageModal />
+                    <HistoryModal />
                     {backdropLibraryVisible ? (
                         <BackdropLibrary
                             vm={vm}

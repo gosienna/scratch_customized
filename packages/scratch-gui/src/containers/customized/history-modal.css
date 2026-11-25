@@ -1,0 +1,110 @@
+@import "../../css/colors.css";
+
+.modal {
+    width: 48rem;
+}
+
+.body {
+    background: $ui-white;
+    padding: 1rem 1.5rem 1.5rem;
+    max-height: 75vh;
+    overflow-y: auto;
+    font-size: 0.85rem;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.message {
+    flex: 1;
+    padding: 0.4rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.25rem;
+}
+
+.primary {
+    padding: 0.45rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: $looks-secondary;
+    color: $ui-white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.primary:disabled {
+    opacity: 0.5;
+}
+
+.versions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.version {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid $ui-black-transparent;
+}
+
+.version-message {
+    flex: 1;
+    font-weight: bold;
+}
+
+.hint {
+    color: $text-primary-transparent;
+    font-size: 0.75rem;
+}
+
+.status {
+    color: $extensions-primary;
+}
+
+.error {
+    color: $error-primary;
+}
+
+.diff pre {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: $ui-secondary;
+    border-radius: 0.25rem;
+    overflow-x: auto;
+    font-size: 0.75rem;
+}
+
+.added {
+    background: hsla(120, 60%, 85%, 1);
+}
+
+.removed {
+    background: hsla(0, 70%, 88%, 1);
+}
+
+.hunk {
+    color: $text-primary-transparent;
+}
+
+.push {
+    margin-top: 1rem;
+}
+
+.push label {
+    display: flex;
+    flex-direction: column;
+    margin: 0.5rem 0;
+}
+
+.push input {
+    padding: 0.35rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.25rem;
+}
