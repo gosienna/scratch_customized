@@ -1,0 +1,80 @@
+@import "../../css/colors.css";
+
+/* Covers the blocks workspace, which stays mounted underneath so the VM and toolbox keep working. */
+.panel {
+    position: absolute;
+    inset: 0;
+    /* Above the blocks workspace and its category menu. */
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    background: $ui-white;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid $ui-black-transparent;
+    background: $ui-tertiary;
+}
+
+.title {
+    flex: 1;
+    font-weight: bold;
+    color: $text-primary;
+}
+
+.dialect {
+    padding: 0.25rem;
+}
+
+.apply, .revert {
+    padding: 0.35rem 0.8rem;
+    border-radius: 0.4rem;
+    border: 1px solid $ui-black-transparent;
+    cursor: pointer;
+}
+
+.apply {
+    background: $motion-primary;
+    border-color: $motion-primary;
+    color: $ui-white;
+    font-weight: bold;
+}
+
+.revert:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.error, .notice, .status {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.error {
+    background: $error-light;
+    color: $text-primary;
+}
+
+.notice {
+    background: $ui-secondary;
+    color: $text-primary-transparent;
+}
+
+.status {
+    color: $extensions-primary;
+}
+
+.editor {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    font-size: 0.85rem;
+}
+
+.editor :global(.cm-editor) {
+    height: 100%;
+}

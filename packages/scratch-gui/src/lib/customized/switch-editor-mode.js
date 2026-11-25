@@ -2,6 +2,7 @@
 import {defineMessages} from 'react-intl';
 import {setEditorMode} from '../../reducers/editor-mode';
 import {EDITOR_MODES} from './editor-mode';
+import {reloadProject} from './reload-project';
 
 const editorModeMessages = defineMessages({
     [EDITOR_MODES.ORIGINAL]: {
@@ -38,12 +39,9 @@ const editorModeItems = modes => Object.fromEntries(modes.map(mode => [mode, {la
  * @returns {Promise} resolves when the project has been reloaded.
  */
 const switchEditorMode = async (vm, mode, dispatch) => {
-    const editingTargetName = vm.editingTarget?.getName();
     const sb3 = await vm.saveProjectSb3();
     dispatch(setEditorMode(mode));
-    await vm.loadProject(await sb3.arrayBuffer());
-    const target = vm.runtime.targets.find(t => t.isOriginal && t.getName() === editingTargetName);
-    if (target) vm.setEditingTarget(target.id);
+    await reloadProject(vm, await sb3.arrayBuffer());
 };
 
 export {

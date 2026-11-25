@@ -264,7 +264,12 @@ class TextParser {
         this.pendingBlock = { proccode, warp: /,\s*warp\s*\)$/.test(line.text), line: line.number }
         continue
       }
-      if (line.indent > 0) this.fail('Unexpected indentation; scripts start at the left edge', line)
+      if (line.indent > 0) {
+        this.fail(
+          'This line is indented differently from the lines above it (or a script does not start at the left edge)',
+          line,
+        )
+      }
       const head = this.parseHead(line)
       if (this.pendingBlock && head.kind !== 'define')
         this.fail('@block(...) must come right before a definition', line)
@@ -333,7 +338,7 @@ class TextParser {
     while (this.index < this.lines.length) {
       const line = this.lines[this.index]
       if (!line || line.indent < indent) break
-      if (line.indent > indent) this.fail('Unexpected indentation', line)
+      if (line.indent > indent) this.fail('This line is indented more than the lines above it', line)
       this.index++
       if (line.text === 'pass') continue
       statements.push(this.parseStatement(line))

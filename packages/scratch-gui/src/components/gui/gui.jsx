@@ -50,6 +50,7 @@ import {MenuRefProvider} from '../../contexts/menu-ref-context.jsx';
 import {ModalFocusProvider} from '../../contexts/modal-focus-context.jsx';
 // CUSTOM
 import ProjectStorageModal from '../../containers/customized/project-storage-modal.jsx';
+import TextCodePanel from '../../containers/customized/text-code-panel.jsx';
 
 const ariaMessages = defineMessages({
     menuBar: {
@@ -493,6 +494,8 @@ const GUIComponent = props => {
                                             vm={vm}
                                             colorMode={colorMode}
                                         />
+                                        {/* CUSTOM: covers the workspace in Text mode */}
+                                        <TextCodePanel />
                                     </Box>
                                     <ExtensionsButton
                                         intl={intl}

@@ -33,7 +33,7 @@ const settingsMenuAriaMessage = defineMessage({
 });
 
 const enabledColorModes = [DEFAULT_MODE, HIGH_CONTRAST_MODE];
-const editorModesMap = editorModeItems([EDITOR_MODES.CUSTOM, EDITOR_MODES.ORIGINAL]);
+const editorModesMap = editorModeItems([EDITOR_MODES.CUSTOM, EDITOR_MODES.TEXT, EDITOR_MODES.ORIGINAL]);
 
 const SettingsMenu = ({
     canChangeLanguage,
