@@ -42,6 +42,12 @@ jobs:
           cache: npm
           node-version-file: .nvmrc
       - uses: ./.github/actions/install-dependencies
+      # The tests produce the files under test with this repository's VM, which loads these packages' dist/.
+      - name: Build this repository's packages
+        run: |
+          for package in task-herder scratch-storage scratch-svg-renderer scratch-render scratch-paint scratch-vm platform; do
+            NODE_ENV=production npm run build --workspace="packages/$package"
+          done
       - name: Install the compatibility suite (official scratch-vm from npm)
         run: npm ci
         working-directory: test/compat
@@ -51,7 +57,10 @@ jobs:
       - name: Cache the official GUI build
         uses: actions/cache@v4
         with:
-          path: test/compat/.official-gui/build
+          # .tag tells build-official-gui.sh that the cached build is current.
+          path: |
+            test/compat/.official-gui/build
+            test/compat/.official-gui/.tag
           key: official-gui-${{ hashFiles('test/compat/scripts/build-official-gui.sh') }}
       - name: Build the official GUI
         run: npm run build:official-gui
