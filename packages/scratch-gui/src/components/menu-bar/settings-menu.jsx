@@ -15,6 +15,9 @@ import {themeMap} from '../../lib/settings/theme/index.js';
 import {persistColorMode} from '../../lib/settings/color-mode/persistence.js';
 import {persistTheme} from '../../lib/settings/theme/persistence.js';
 import {setColorMode, setTheme} from '../../reducers/settings.js';
+// CUSTOM
+import {EDITOR_MODES} from '../../lib/customized/editor-mode.js';
+import {editorModeItems, switchEditorMode} from '../../lib/customized/switch-editor-mode.js';
 
 import menuBarStyles from './menu-bar.css';
 import styles from './settings-menu.css';
@@ -30,6 +33,7 @@ const settingsMenuAriaMessage = defineMessage({
 });
 
 const enabledColorModes = [DEFAULT_MODE, HIGH_CONTRAST_MODE];
+const editorModesMap = editorModeItems([EDITOR_MODES.CUSTOM, EDITOR_MODES.ORIGINAL]);
 
 const SettingsMenu = ({
     canChangeLanguage,
@@ -41,6 +45,8 @@ const SettingsMenu = ({
     onChangeColorMode,
     activeTheme,
     onChangeTheme,
+    activeEditorMode,
+    onChangeEditorMode,
     depth
 }) => {
     const intl = useIntl();
@@ -97,6 +103,18 @@ const SettingsMenu = ({
             onRequestClose={handleOnClose}
         >
             <MenuSection>
+                <PreferenceMenu
+                    itemsMap={editorModesMap}
+                    onChange={onChangeEditorMode}
+                    submenuLabel={{
+                        defaultMessage: 'Editor',
+                        description: 'Editor mode sub-menu',
+                        id: 'gui.customized.menuBar.editorMode'
+                    }}
+                    selectedItemKey={activeEditorMode}
+                    isRtl={isRtl}
+                    depth={depth + 1}
+                />
                 {canChangeLanguage && <LanguageMenu depth={depth + 1} />}
                 {canChangeTheme &&
                     // TODO: Consider always showing the theme menu, even if there is a single available theme
@@ -141,12 +159,16 @@ SettingsMenu.propTypes = {
     onChangeColorMode: PropTypes.func,
     activeTheme: PropTypes.string,
     onChangeTheme: PropTypes.func,
+    activeEditorMode: PropTypes.string,
+    onChangeEditorMode: PropTypes.func,
     depth: PropTypes.number
 };
 
 const mapStateToProps = state => ({
     activeColorMode: state.scratchGui.settings.colorMode,
     activeTheme: state.scratchGui.settings.theme,
+    activeEditorMode: state.scratchGui.editorMode,
+    vm: state.scratchGui.vm,
     isRtl: state.locales.isRtl
 });
 
@@ -158,10 +180,29 @@ const mapDispatchToProps = dispatch => ({
     onChangeTheme: theme => {
         dispatch(setTheme(theme));
         persistTheme(theme);
-    }
+    },
+    dispatch
 });
+
+const mergeProps = (stateProps, dispatchProps, ownProps) => {
+    const {vm, ...state} = stateProps;
+    const {dispatch, ...dispatchers} = dispatchProps;
+    return {
+        ...ownProps,
+        ...state,
+        ...dispatchers,
+        onChangeEditorMode: mode => {
+            if (mode === state.activeEditorMode) return;
+            switchEditorMode(vm, mode, dispatch).catch(error => {
+                // The project stays loaded as it was; report why the switch failed.
+                console.error('switchEditorMode failed', error); // eslint-disable-line no-console
+            });
+        }
+    };
+};
 
 export default connect(
     mapStateToProps,
-    mapDispatchToProps
+    mapDispatchToProps,
+    mergeProps
 )(SettingsMenu);
