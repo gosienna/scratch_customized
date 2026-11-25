@@ -55,6 +55,9 @@ class VirtualMachine extends EventEmitter {
             log.error(`Failed to register runtime service: ${JSON.stringify(e)}`);
         });
 
+        // CUSTOM: see setProjectTransforms.
+        this._projectTransforms = {};
+
         /**
          * The "currently editing"/selected target ID for the VM.
          * Block events from any Blockly workspace are routed to this target.
@@ -466,7 +469,35 @@ class VirtualMachine extends EventEmitter {
      */
     toJSON (optTargetId) {
         const sb3 = require('./serialization/sb3');
-        return StringUtil.stringify(sb3.serialize(this.runtime, optTargetId));
+        let json = sb3.serialize(this.runtime, optTargetId);
+        if (this._projectTransforms.serialize) {
+            json = this._projectTransforms.serialize(json, {vm: this, isSprite: Boolean(optTargetId)});
+        }
+        return StringUtil.stringify(json);
+    }
+
+    // CUSTOM: hooks for editors that add runtime-only blocks.
+    /**
+     * Set functions that rewrite sb3 JSON on its way out of and into the VM. `serialize` receives the output of
+     * sb3.serialize (a project, or a single target when exporting a sprite) and `deserialize` receives validated
+     * sb3 JSON before sb3.deserialize. Each is called as `fn(json, {vm, isSprite})` and returns the JSON to use.
+     * @param {?{serialize: ?Function, deserialize: ?Function}} transforms - the transforms, or null to remove them.
+     */
+    setProjectTransforms (transforms) {
+        this._projectTransforms = transforms || {};
+    }
+
+    /**
+     * Register additional block implementations, keyed by opcode.
+     * @param {Object.<string, Function>} primitives - opcode to `(args, util) => value` implementation.
+     */
+    addPrimitives (primitives) {
+        Object.assign(this.runtime._primitives, primitives);
+    }
+
+    _deserializeTransform (json, isSprite) {
+        if (!this._projectTransforms.deserialize) return json;
+        return this._projectTransforms.deserialize(json, {vm: this, isSprite});
     }
 
     // TODO do we still need this function? Keeping it here so as not to introduce
@@ -495,7 +526,7 @@ class VirtualMachine extends EventEmitter {
             performance.mark('scratch-vm-deserialize-start');
         }
         const runtime = this.runtime;
-        const deserializePromise = function () {
+        const deserializePromise = () => {
             const projectVersion = projectJSON.projectVersion;
             if (projectVersion === 2) {
                 const sb2 = require('./serialization/sb2');
@@ -503,7 +534,7 @@ class VirtualMachine extends EventEmitter {
             }
             if (projectVersion === 3) {
                 const sb3 = require('./serialization/sb3');
-                return sb3.deserialize(projectJSON, runtime, zip);
+                return sb3.deserialize(this._deserializeTransform(projectJSON, false), runtime, zip);
             }
             // TODO: reject with an Error (possible breaking API change!)
             // eslint-disable-next-line prefer-promise-reject-errors
@@ -661,7 +692,7 @@ class VirtualMachine extends EventEmitter {
         // Validate & parse
         const sb3 = require('./serialization/sb3');
         return sb3
-            .deserialize(sprite, this.runtime, zip, true)
+            .deserialize(this._deserializeTransform(sprite, true), this.runtime, zip, true)
             .then(({targets, extensions}) => this.installTargets(targets, extensions, false));
     }
 
