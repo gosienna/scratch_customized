@@ -1,0 +1,22 @@
+@import "../../css/colors.css";
+
+.resizer {
+    flex-shrink: 0;
+    width: 0.375rem;
+    margin-inline-end: -0.375rem; /* overlap the stage column's padding so the layout keeps its width */
+    position: relative;
+    z-index: 1;
+    cursor: col-resize;
+    touch-action: none;
+    border-radius: 0.1875rem;
+}
+
+.resizer:hover,
+.resizer:focus-visible,
+.dragging {
+    background-color: $motion-primary;
+}
+
+.resizer:focus-visible {
+    outline: none;
+}

@@ -33,7 +33,7 @@ import ConnectionModal from '../../containers/connection-modal.jsx';
 import TelemetryModal from '../telemetry-modal/telemetry-modal.jsx';
 
 import layout, {STAGE_SIZE_MODES} from '../../lib/layout-constants';
-import {resolveStageSize} from '../../lib/screen-utils';
+import {resolveStageSize, stageSizeForWidth} from '../../lib/screen-utils'; // CUSTOM: stageSizeForWidth
 import {colorModeMap} from '../../lib/settings/color-mode/index.js';
 import {DEFAULT_THEME, themeMap} from '../../lib/settings/theme/index.js';
 import {AccountMenuOptionsPropTypes} from '../../lib/account-menu-options';
@@ -52,6 +52,8 @@ import {ModalFocusProvider} from '../../contexts/modal-focus-context.jsx';
 import ProjectStorageModal from '../../containers/customized/project-storage-modal.jsx';
 import TextCodePanel from '../../containers/customized/text-code-panel.jsx';
 import HistoryModal from '../../containers/customized/history-modal.jsx';
+import StageResizer from '../../containers/customized/stage-resizer.jsx';
+import {EDITOR_MODES} from '../../lib/customized/editor-mode.js';
 
 const ariaMessages = defineMessages({
     menuBar: {
@@ -198,6 +200,8 @@ const GUIComponent = props => {
         showNewFeatureCallouts,
         soundsTabVisible,
         stageSizeMode,
+        stageWidth,
+        editorMode,
         targetIsStage,
         telemetryModalVisible,
         colorMode,
@@ -255,7 +259,11 @@ const GUIComponent = props => {
     }
 
     return (<MediaQuery minWidth={layout.fullSizeMinWidth}>{isFullSize => {
-        const stageSize = resolveStageSize(stageSizeMode, isFullSize);
+        // CUSTOM: Custom mode sizes the stage by the width the user dragged its edge to.
+        const isCustomMode = editorMode === EDITOR_MODES.CUSTOM;
+        const stageSize = isCustomMode ?
+            stageSizeForWidth(stageWidth) :
+            resolveStageSize(stageSizeMode, isFullSize);
         const boxStyles = classNames(styles.bodyWrapper, {
             [styles.bodyWrapperWithoutMenuBar]: menuBarHidden
         });
@@ -541,6 +549,8 @@ const GUIComponent = props => {
                             ) : null}
                         </Box>
 
+                        {/* CUSTOM */}
+                        {isCustomMode ? <StageResizer isRtl={isRtl} /> : null}
                         <Box
                             role="complementary"
                             aria-label={intl.formatMessage(ariaMessages.stageAndTarget)}
@@ -553,6 +563,7 @@ const GUIComponent = props => {
                                 isRtl={isRtl}
                                 isCreating={isCreating}
                                 stageSize={stageSize}
+                                stageWidth={isCustomMode ? stageWidth : null} // CUSTOM
                                 vm={vm}
                                 ariaRole="region"
                                 ariaLabel={intl.formatMessage(ariaMessages.stage)}
@@ -665,6 +676,8 @@ GUIComponent.propTypes = {
     showNewFeatureCallouts: PropTypes.bool,
     soundsTabVisible: PropTypes.bool,
     stageSizeMode: PropTypes.oneOf(Object.keys(STAGE_SIZE_MODES)),
+    stageWidth: PropTypes.number, // CUSTOM
+    editorMode: PropTypes.oneOf(Object.values(EDITOR_MODES)), // CUSTOM
     setPlatform: PropTypes.func,
     targetIsStage: PropTypes.bool,
     telemetryModalVisible: PropTypes.bool,
@@ -712,6 +725,9 @@ const mapStateToProps = state => ({
     // This is the button's mode, as opposed to the actual current state
     blocksId: state.scratchGui.timeTravel.year.toString(),
     stageSizeMode: state.scratchGui.stageSize.stageSize,
+    // CUSTOM
+    stageWidth: state.scratchGui.stageSize.stageWidth,
+    editorMode: state.scratchGui.editorMode,
     colorMode: state.scratchGui.settings.colorMode,
     theme: state.scratchGui.settings.theme,
     backpackConfigured: !!state.scratchGui.config.storage?.backpackStorage

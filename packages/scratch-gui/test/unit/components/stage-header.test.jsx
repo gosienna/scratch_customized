@@ -29,9 +29,10 @@ describe('StageHeader Component', () => {
     const onShowThumbnailError = jest.fn();
     const onUpdateProjectThumbnail = jest.fn();
 
-    const getComponent = () => (
+    const getComponent = (extraProps = {}) => (
         <Provider store={store}>
             <StageHeader
+                {...extraProps}
                 isFullScreen={false}
                 isPlayerOnly={false}
                 manuallySaveThumbnails
@@ -78,5 +79,18 @@ describe('StageHeader Component', () => {
 
         expect(onShowThumbnailError).toHaveBeenCalled();
         expect(clickThumbnailButton(container)).toBeDefined();
+    });
+
+    test('the small/large stage toggle can be hidden while full screen stays', () => {
+        const toggleTitle = 'Switch to small stage';
+        const fullScreenLabel = 'button[aria-label="Enter full screen mode"]';
+
+        const shown = renderWithIntl(getComponent());
+        expect(shown.container.querySelector(`[title="${toggleTitle}"]`)).not.toBeNull();
+        shown.unmount();
+
+        const {container} = renderWithIntl(getComponent({hideStageSizeToggle: true}));
+        expect(container.querySelector(`[title="${toggleTitle}"]`)).toBeNull();
+        expect(container.querySelector(fullScreenLabel)).not.toBeNull();
     });
 });

@@ -10,6 +10,7 @@ import {connect} from 'react-redux';
 
 import StageHeaderComponent from '../components/stage-header/stage-header.jsx';
 import {showAlertWithTimeout, showStandardAlert} from '../reducers/alerts.js';
+import {EDITOR_MODES} from '../lib/customized/editor-mode.js'; // CUSTOM
 
 const ALERT_ID = {
     settingThumbnail: 'settingThumbnail',
@@ -62,6 +63,8 @@ const mapStateToProps = state => {
 
     return {
         stageSizeMode: state.scratchGui.stageSize.stageSize,
+        // CUSTOM: Custom mode resizes the stage by dragging its edge instead of the small/large toggle
+        hideStageSizeToggle: state.scratchGui.editorMode === EDITOR_MODES.CUSTOM,
         showBranding: state.scratchGui.mode.showBranding,
         isFullScreen: state.scratchGui.mode.isFullScreen,
         isPlayerOnly: state.scratchGui.mode.isPlayerOnly,

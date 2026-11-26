@@ -82,6 +82,7 @@ const messages = defineMessages({
 
 const StageHeaderComponent = function (props) {
     const {
+        hideStageSizeToggle,
         isFullScreen,
         isPlayerOnly,
         manuallySaveThumbnails,
@@ -259,7 +260,7 @@ const StageHeaderComponent = function (props) {
         );
     } else {
         const stageControls =
-            isPlayerOnly ? (
+            (isPlayerOnly || hideStageSizeToggle) ? ( // CUSTOM: hideStageSizeToggle
                 []
             ) : (
                 <ToggleButtons
@@ -359,6 +360,7 @@ const StageHeaderComponent = function (props) {
 };
 
 StageHeaderComponent.propTypes = {
+    hideStageSizeToggle: PropTypes.bool, // CUSTOM
     isFullScreen: PropTypes.bool.isRequired,
     isPlayerOnly: PropTypes.bool.isRequired,
     manuallySaveThumbnails: PropTypes.bool,

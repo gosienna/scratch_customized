@@ -27,6 +27,7 @@ const StageWrapperComponent = function (props) {
         username,
         userOwnsProject,
         stageSize,
+        stageWidth,
         showNewFeatureCallouts,
         vm
     } = props;
@@ -60,6 +61,7 @@ const StageWrapperComponent = function (props) {
                     isRendererSupported ?
                         <Stage
                             stageSize={stageSize}
+                            stageWidth={stageWidth} // CUSTOM
                             vm={vm}
                         /> :
                         null
@@ -88,6 +90,7 @@ StageWrapperComponent.propTypes = {
     userOwnsProject: PropTypes.bool,
     onUpdateProjectThumbnail: PropTypes.func,
     stageSize: PropTypes.oneOf(Object.keys(STAGE_DISPLAY_SIZES)).isRequired,
+    stageWidth: PropTypes.number, // CUSTOM
     vm: PropTypes.instanceOf(VM).isRequired
 };
 
