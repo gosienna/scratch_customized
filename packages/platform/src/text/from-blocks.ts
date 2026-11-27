@@ -322,6 +322,12 @@ class ScriptReader {
   }
 }
 
+/** The ids of a target's script roots (top blocks and loose reporters), in the order scriptsFromTarget reads them. */
+export const scriptRootIds = (target: SerializedTarget): string[] =>
+  Object.entries(target.blocks)
+    .filter(([, block]) => Array.isArray(block) || (block.topLevel && !block.shadow))
+    .map(([id]) => id)
+
 /** The scripts of a target, in the order they appear in its block list. */
 export const scriptsFromTarget = (target: SerializedTarget): Script[] => new ScriptReader(target).read()
 

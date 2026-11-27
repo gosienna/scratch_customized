@@ -1,5 +1,5 @@
 // CUSTOM: connect the platform's editor-only blocks to a scratch-vm instance.
-import {createProjectTransforms, installPrimitives} from '@scratch-customized/platform';
+import {createProjectTransforms, installConsoleCapture, installPrimitives} from '@scratch-customized/platform';
 import {getEditorMode, usesCustomBlocks} from './editor-mode';
 
 /**
@@ -9,6 +9,8 @@ import {getEditorMode, usesCustomBlocks} from './editor-mode';
  */
 const installPlatform = vm => {
     installPrimitives(vm);
+    // Keep console output and uncaught errors (tagged with the running block) for the AI assistant.
+    installConsoleCapture(window, vm);
     vm.setProjectTransforms(createProjectTransforms({
         shouldRaise: () => usesCustomBlocks(getEditorMode())
     }));

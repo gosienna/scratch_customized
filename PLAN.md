@@ -242,6 +242,7 @@ For each release, take 5 key fixtures and:
 | Text mode, Python and JavaScript styles | `packages/platform/src/text/`, `containers/customized/text-code-panel.jsx` | round trip of every fixture in both dialects + behavior check; browser checks |
 | Git version history (save, diff, open, download .sb3, branches, push) | `packages/platform/src/vcs/`, `containers/customized/history-modal.jsx` | Node test with a real repo; browser checks |
 | Compatibility suite, Levels 1–3 and the manual checklist (Level 5) | `test/compat/` | 32 tests vs. official npm scratch-vm; 24 files opened in the official GUI built from the upstream tag |
+| AI helper panel (Claude Haiku 5.5 by default, or Sonnet 5.5 / Opus 5.5 from the panel's model picker; user's own API key): reads sprites/scripts/state, sees costumes as pictures, runs the project or one script/loop for a few seconds, reads console errors tagged with the failing block; with Settings > AI helper > "Can also change the project" (off by default) it writes code, creates sprites and draws SVG costumes | `packages/platform/src/assistant/`, `containers/customized/ai-assistant-panel.jsx` | VM tests (`test/vm/assistant.test.ts`); browser checks |
 | GitHub Pages build and deploy, CI | `scripts/build-pages.sh`, `.github/workflows/{ci,pages}.yml` | site served under `/scratch_customized/` with no failed requests |
 
 ### Differences from the plan

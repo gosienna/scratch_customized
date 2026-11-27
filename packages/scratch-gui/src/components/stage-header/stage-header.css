@@ -77,6 +77,19 @@
     transform: scaleX(-1);
 }
 
+/* CUSTOM: the Helper button holds a word, not an icon. */
+.helper-button {
+    width: auto;
+    padding: 0 0.6rem;
+    color: $text-primary;
+    font-weight: bold;
+}
+
+.helper-button-active {
+    background-color: $looks-light-transparent;
+    border-color: $looks-secondary;
+}
+
 .right-section {
     display: flex;
     flex-direction: row;

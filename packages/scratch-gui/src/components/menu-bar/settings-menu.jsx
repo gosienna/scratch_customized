@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React, {useMemo} from 'react';
-import {useIntl, FormattedMessage, defineMessage} from 'react-intl';
+import {useIntl, FormattedMessage, defineMessage, defineMessages} from 'react-intl';
 import {connect} from 'react-redux';
 import useMenuNavigation from '../../hooks/use-menu-navigation';
 
@@ -18,6 +18,7 @@ import {setColorMode, setTheme} from '../../reducers/settings.js';
 // CUSTOM
 import {EDITOR_MODES} from '../../lib/customized/editor-mode.js';
 import {editorModeItems, switchEditorMode} from '../../lib/customized/switch-editor-mode.js';
+import {setAiAssistantCanEdit} from '../../reducers/ai-assistant.js';
 
 import menuBarStyles from './menu-bar.css';
 import styles from './settings-menu.css';
@@ -34,6 +35,20 @@ const settingsMenuAriaMessage = defineMessage({
 
 const enabledColorModes = [DEFAULT_MODE, HIGH_CONTRAST_MODE];
 const editorModesMap = editorModeItems([EDITOR_MODES.CUSTOM, EDITOR_MODES.TEXT, EDITOR_MODES.ORIGINAL]);
+// CUSTOM: whether the AI helper may change the project.
+const aiEditingMessages = defineMessages({
+    off: {
+        id: 'gui.customized.menuBar.aiEditing.off',
+        defaultMessage: 'Can look and test only',
+        description: 'AI helper setting: it may read and test-run the project but not change it'
+    },
+    on: {
+        id: 'gui.customized.menuBar.aiEditing.on',
+        defaultMessage: 'Can also change the project',
+        description: 'AI helper setting: it may create sprites and costumes and change code'
+    }
+});
+const aiEditingMap = {off: {label: aiEditingMessages.off}, on: {label: aiEditingMessages.on}};
 
 const SettingsMenu = ({
     canChangeLanguage,
@@ -47,6 +62,8 @@ const SettingsMenu = ({
     onChangeTheme,
     activeEditorMode,
     onChangeEditorMode,
+    aiCanEdit,
+    onChangeAiEditing,
     depth
 }) => {
     const intl = useIntl();
@@ -115,6 +132,18 @@ const SettingsMenu = ({
                     isRtl={isRtl}
                     depth={depth + 1}
                 />
+                <PreferenceMenu
+                    itemsMap={aiEditingMap}
+                    onChange={onChangeAiEditing}
+                    submenuLabel={{
+                        defaultMessage: 'AI helper',
+                        description: 'Sub-menu for what the AI helper may do',
+                        id: 'gui.customized.menuBar.aiEditing'
+                    }}
+                    selectedItemKey={aiCanEdit ? 'on' : 'off'}
+                    isRtl={isRtl}
+                    depth={depth + 1}
+                />
                 {canChangeLanguage && <LanguageMenu depth={depth + 1} />}
                 {canChangeTheme &&
                     // TODO: Consider always showing the theme menu, even if there is a single available theme
@@ -161,6 +190,8 @@ SettingsMenu.propTypes = {
     onChangeTheme: PropTypes.func,
     activeEditorMode: PropTypes.string,
     onChangeEditorMode: PropTypes.func,
+    aiCanEdit: PropTypes.bool, // CUSTOM
+    onChangeAiEditing: PropTypes.func, // CUSTOM
     depth: PropTypes.number
 };
 
@@ -168,6 +199,7 @@ const mapStateToProps = state => ({
     activeColorMode: state.scratchGui.settings.colorMode,
     activeTheme: state.scratchGui.settings.theme,
     activeEditorMode: state.scratchGui.editorMode,
+    aiCanEdit: state.scratchGui.aiAssistant.canEdit, // CUSTOM
     vm: state.scratchGui.vm,
     isRtl: state.locales.isRtl
 });
@@ -181,6 +213,7 @@ const mapDispatchToProps = dispatch => ({
         dispatch(setTheme(theme));
         persistTheme(theme);
     },
+    onChangeAiEditing: key => dispatch(setAiAssistantCanEdit(key === 'on')), // CUSTOM
     dispatch
 });
 

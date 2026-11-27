@@ -47,3 +47,5 @@ export type { Author, ProjectRepo, RemoteOptions, RepoSetting, RepoSummary, Vers
 export { deleteBrowserRepo, getBrowserGitFs, listBrowserRepos, newProjectId, repoDirFor } from './vcs/browser-fs'
 export { bundleToken, cloneBundle, createBundle, parseBundle, repoToken, syncFromBundle } from './vcs/bundle'
 export type { Bundle, ParsedBundle, SyncResult } from './vcs/bundle'
+
+export * from './assistant'

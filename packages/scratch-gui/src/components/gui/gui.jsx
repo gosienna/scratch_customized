@@ -53,6 +53,7 @@ import ProjectLibrary from '../../containers/customized/project-library.jsx';
 import TextCodePanel from '../../containers/customized/text-code-panel.jsx';
 import HistoryModal from '../../containers/customized/history-modal.jsx';
 import StageResizer from '../../containers/customized/stage-resizer.jsx';
+import AiAssistantPanel from '../../containers/customized/ai-assistant-panel.jsx';
 import {EDITOR_MODES} from '../../lib/customized/editor-mode.js';
 
 const ariaMessages = defineMessages({
@@ -202,6 +203,7 @@ const GUIComponent = props => {
         stageSizeMode,
         stageWidth,
         editorMode,
+        aiAssistantVisible,
         targetIsStage,
         telemetryModalVisible,
         colorMode,
@@ -590,6 +592,8 @@ const GUIComponent = props => {
                                 />
                             </Box>
                         </Box>
+                        {/* CUSTOM: the AI assistant chat panel. */}
+                        {aiAssistantVisible ? <AiAssistantPanel /> : null}
                     </Box>
                     <DragLayer />
                 </Box>
@@ -678,6 +682,7 @@ GUIComponent.propTypes = {
     stageSizeMode: PropTypes.oneOf(Object.keys(STAGE_SIZE_MODES)),
     stageWidth: PropTypes.number, // CUSTOM
     editorMode: PropTypes.oneOf(Object.values(EDITOR_MODES)), // CUSTOM
+    aiAssistantVisible: PropTypes.bool, // CUSTOM
     setPlatform: PropTypes.func,
     targetIsStage: PropTypes.bool,
     telemetryModalVisible: PropTypes.bool,
@@ -728,6 +733,7 @@ const mapStateToProps = state => ({
     // CUSTOM
     stageWidth: state.scratchGui.stageSize.stageWidth,
     editorMode: state.scratchGui.editorMode,
+    aiAssistantVisible: state.scratchGui.aiAssistant.visible,
     colorMode: state.scratchGui.settings.colorMode,
     theme: state.scratchGui.settings.theme,
     backpackConfigured: !!state.scratchGui.config.storage?.backpackStorage
