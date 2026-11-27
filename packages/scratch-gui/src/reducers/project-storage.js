@@ -7,6 +7,7 @@ const CLOSE_DIALOG = 'scratch-gui/project-storage/CLOSE_DIALOG';
 const SET_CURRENT = 'scratch-gui/project-storage/SET_CURRENT';
 const SET_LAST_KIND = 'scratch-gui/project-storage/SET_LAST_KIND';
 const SET_VCS_STATUS = 'scratch-gui/project-storage/SET_VCS_STATUS';
+const SET_GOOGLE_ACCOUNT = 'scratch-gui/project-storage/SET_GOOGLE_ACCOUNT';
 // Upstream actions that put a different project in the editor (File > New, File > Load from your computer).
 const START_FETCHING_NEW = 'scratch-gui/project-state/START_FETCHING_NEW';
 const START_LOADING_VM_FILE_UPLOAD = 'scratch-gui/project-state/START_LOADING_VM_FILE_UPLOAD';
@@ -37,7 +38,9 @@ const initialState = {
     /** What the last commit or sync did, shown beside the Commit button: {message, error}, or null. */
     vcsStatus: null,
     /** The store the My Projects page showed last ('browser', 'folder' or 'drive'). */
-    lastKind: typeof window === 'undefined' ? 'browser' : readLastKind()
+    lastKind: typeof window === 'undefined' ? 'browser' : readLastKind(),
+    /** The Google account signed in for Drive in this page, {name, email, photoUrl}, or null. */
+    googleAccount: null
 };
 
 const reducer = function (state, action) {
@@ -53,6 +56,8 @@ const reducer = function (state, action) {
         return {...state, vcsStatus: action.status};
     case SET_LAST_KIND:
         return {...state, lastKind: action.kind};
+    case SET_GOOGLE_ACCOUNT:
+        return {...state, googleAccount: action.account};
     case START_FETCHING_NEW:
     case START_LOADING_VM_FILE_UPLOAD:
         // The editor now shows a project that is not in any repository yet.
@@ -93,6 +98,11 @@ const setLastStoreKind = kind => {
     }
     return {type: SET_LAST_KIND, kind};
 };
+/**
+ * @param {?{name: string, email: string, photoUrl: ?string}} account - the signed-in Google account.
+ * @returns {object} the action.
+ */
+const setGoogleAccount = account => ({type: SET_GOOGLE_ACCOUNT, account});
 
 export {
     reducer as default,
@@ -102,5 +112,6 @@ export {
     setStoredProject,
     setVcsStatus,
     setLastStoreKind,
+    setGoogleAccount,
     STORE_KINDS
 };

@@ -177,6 +177,14 @@
     align-items: center;
 }
 
+/* CUSTOM: the signed-in Google account's email. */
+.account-email {
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .profile-icon {
     margin: 0 .25rem;
     width: $menu-bar-button-size;

@@ -61,7 +61,6 @@ import helpIcon from '../../lib/assets/icon--tutorials.svg';
 import mystuffIcon from './icon--mystuff.png';
 import profileIcon from './icon--profile.png';
 import remixIcon from './icon--remix.svg';
-import dropdownCaret from './dropdown-caret.svg';
 import debugIcon from '../debug-modal/icons/icon--debug.svg';
 
 import scratchLogo from './scratch-logo.svg';
@@ -77,6 +76,9 @@ import {AccountMenuOptionsPropTypes} from '../../lib/account-menu-options';
 import AccountMenu from './account-menu.jsx';
 import {openProjectStorage} from '../../reducers/project-storage'; // CUSTOM
 import VcsBar from '../../containers/customized/vcs-bar.jsx'; // CUSTOM
+import {getProjectStores} from '../../lib/customized/project-stores'; // CUSTOM
+import {signInToGoogle} from '../../lib/customized/google-account'; // CUSTOM
+import log from '../../lib/log'; // CUSTOM
 
 const ariaMessages = defineMessages({
     tutorials: {
@@ -98,6 +100,11 @@ const ariaMessages = defineMessages({
         id: 'gui.menuBar.myStuff',
         defaultMessage: 'My Stuff',
         description: 'accessibility text for the my stuff button'
+    },
+    googleSignIn: { // CUSTOM
+        id: 'gui.customized.menuBar.googleSignIn',
+        defaultMessage: 'Sign in with Google',
+        description: 'Menu bar button for signing in to Google, shown where the signed-in account appears'
     }
 });
 
@@ -163,6 +170,7 @@ class MenuBar extends React.Component {
             'handleClickNew',
             'handleClickSeeCommunity',
             'handleClickShare',
+            'handleClickGoogleSignIn', // CUSTOM
             'handleSetMode',
             'handleKeyPress',
             'handleRestoreOption',
@@ -175,6 +183,10 @@ class MenuBar extends React.Component {
     }
     componentWillUnmount () {
         document.removeEventListener('keydown', this.handleKeyPress);
+    }
+    // CUSTOM
+    handleClickGoogleSignIn () {
+        this.props.onSignInToGoogle().catch(e => log.warn('MenuBar: Google sign-in was not completed', e));
     }
     handleClickNew () {
         // if the project is dirty, and user owns the project, we will autosave.
@@ -601,30 +613,36 @@ class MenuBar extends React.Component {
                                             src={mystuffIcon}
                                         />
                                     </button>
-                                    <MenuBarItemTooltip
-                                        id="account-nav"
-                                        place={this.props.isRtl ? 'right' : 'left'}
-                                    >
-                                        <div
+                                    {/* CUSTOM: the Google account signed in for Drive backups. */}
+                                    {this.props.googleAccount ? (
+                                        <button
                                             className={classNames(
                                                 styles.menuBarItem,
                                                 styles.hoverable,
                                                 styles.accountNavMenu
                                             )}
+                                            title={`${this.props.googleAccount.name}\n${
+                                                this.props.googleAccount.email}`}
+                                            onClick={this.props.onClickMyProjects}
                                         >
                                             <img
                                                 className={styles.profileIcon}
-                                                src={profileIcon}
+                                                src={this.props.googleAccount.photoUrl || profileIcon}
+                                                referrerPolicy="no-referrer"
+                                                alt=""
                                             />
-                                            <span>
-                                                {'scratch-cat'}
+                                            <span className={styles.accountEmail}>
+                                                {this.props.googleAccount.email}
                                             </span>
-                                            <img
-                                                className={styles.dropdownCaretIcon}
-                                                src={dropdownCaret}
-                                            />
-                                        </div>
-                                    </MenuBarItemTooltip>
+                                        </button>
+                                    ) : (getProjectStores().drive && (
+                                        <button
+                                            className={classNames(styles.menuBarItem, styles.hoverable)}
+                                            onClick={this.handleClickGoogleSignIn}
+                                        >
+                                            <FormattedMessage {...ariaMessages.googleSignIn} />
+                                        </button>
+                                    ))}
                                 </React.Fragment>
                             ) : []}
                         </React.Fragment>
@@ -696,6 +714,12 @@ MenuBar.propTypes = {
     onClickNew: PropTypes.func,
     onClickRemix: PropTypes.func,
     onClickMyProjects: PropTypes.func, // CUSTOM
+    onSignInToGoogle: PropTypes.func, // CUSTOM
+    googleAccount: PropTypes.shape({ // CUSTOM
+        name: PropTypes.string,
+        email: PropTypes.string,
+        photoUrl: PropTypes.string
+    }),
     onClickSave: PropTypes.func,
     onClickSaveAsCopy: PropTypes.func,
     onLogOut: PropTypes.func,
@@ -742,6 +766,7 @@ const mapStateToProps = (state, ownProps) => {
         locale: state.locales.locale,
         loginMenuOpen: loginMenuOpen(state),
         projectTitle: state.scratchGui.projectTitle,
+        googleAccount: state.scratchGui.projectStorage.googleAccount, // CUSTOM
         username: ownProps.username ?? (user ? user.username : null),
         avatarBadge: ownProps.avatarBadge ?? (user ? user.membership_avatar_badge : null),
         userIsEducator: permissions && permissions.educator,
@@ -783,6 +808,7 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     onClickLogin: ownProps.onClickLogin ?? (() => dispatch(openLoginMenu())),
     onClickSave: () => dispatch(manualUpdateProject()),
     onClickMyProjects: () => dispatch(openProjectStorage('projects')), // CUSTOM
+    onSignInToGoogle: () => signInToGoogle(dispatch), // CUSTOM
     onClickRemix: () => dispatch(remixProject()),
     onRequestCloseLogin: () => dispatch(closeLoginMenu()),
     onSeeCommunity: ownProps.onSeeCommunity ?? (() => dispatch(setPlayer(true))),

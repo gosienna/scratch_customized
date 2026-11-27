@@ -49,6 +49,14 @@ export interface DriveFolder {
   name: string
 }
 
+/** The Google account that is signed in. */
+export interface DriveAccount {
+  name: string
+  email: string
+  /** The account's profile photo, if it has one. */
+  photoUrl?: string
+}
+
 export interface DriveStore extends ProjectStore {
   /** The linked folder, if one has been linked. */
   folder: () => Promise<DriveFolder | undefined>
@@ -56,6 +64,8 @@ export interface DriveStore extends ProjectStore {
   linkFolder: (idOrUrl: string) => Promise<DriveFolder>
   /** The current access token, for Google APIs used beside the store (the folder Picker). */
   accessToken: () => Promise<string>
+  /** The signed-in account. */
+  account: () => Promise<DriveAccount>
 }
 
 /** The folder ID in a Drive folder link (`…/folders/<id>`, `…?id=<id>`) or a bare ID; undefined otherwise. */
@@ -241,6 +251,13 @@ export const createDriveStore = (options: { getToken: TokenProvider; fetch?: typ
       return folder
     },
     accessToken: () => currentToken(),
+    account: async () => {
+      const response = await request(`${API}/about?fields=user(displayName,emailAddress,photoLink)`)
+      const { user } = (await response.json()) as {
+        user: { displayName: string; emailAddress: string; photoLink?: string }
+      }
+      return { name: user.displayName, email: user.emailAddress, photoUrl: user.photoLink }
+    },
     list: async () => {
       const folder = await linkedFolder()
       // Saving into a trashed folder succeeds, but the files cannot be seen in Drive, so say so instead.

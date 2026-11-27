@@ -7,6 +7,7 @@ import {connect, useStore} from 'react-redux';
 import {pickDriveFolder} from '@scratch-customized/platform';
 
 import {getProjectStores, GOOGLE_PICKER_API_KEY, GOOGLE_APP_ID} from '../../lib/customized/project-stores';
+import {signInToGoogle} from '../../lib/customized/google-account';
 import {
     deleteBrowserProject,
     listBrowserProjects,
@@ -337,7 +338,8 @@ const ProjectLibrary = ({
     };
 
     const handleConnect = useCallbackRef(() => run(async () => {
-        await activeStore.connect();
+        if (kind === 'drive') await signInToGoogle(store.dispatch);
+        else await activeStore.connect();
         await refresh();
     }));
 

@@ -345,6 +345,28 @@ describe('Google Drive store', () => {
     await expect(store.list()).rejects.toThrow('The folder "Class 5B" is in the Google Drive trash')
   })
 
+  test('reports the signed-in account', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+    const store = createDriveStore({
+      getToken: () => Promise.resolve({ token: 't', expiresAt: Date.now() + 3_600_000 }),
+      fetch: fetchMock,
+    })
+    await store.connect()
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        user: { displayName: 'Ada Lovelace', emailAddress: 'ada@example.com', photoLink: 'https://lh3/photo' },
+      }),
+    )
+    expect(await store.account()).toEqual({
+      name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      photoUrl: 'https://lh3/photo',
+    })
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress,photoLink)')
+    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer t')
+  })
+
   test('reports API errors', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response('quota exceeded', { status: 403 }))
     const store = createDriveStore({

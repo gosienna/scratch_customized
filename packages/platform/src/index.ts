@@ -21,7 +21,7 @@ export type { LegacyBrowserProjects } from './storage/indexeddb-store'
 export { createFolderStore } from './storage/folder-store'
 export type { FolderStore } from './storage/folder-store'
 export { createDriveStore, googleIdentityTokenProvider, parseDriveFolderId } from './storage/drive-store'
-export type { AccessToken, DriveFolder, DriveStore, TokenProvider } from './storage/drive-store'
+export type { AccessToken, DriveAccount, DriveFolder, DriveStore, TokenProvider } from './storage/drive-store'
 export { pickDriveFolder } from './storage/drive-picker'
 
 export { applyText, targetToText, TextSyntaxError } from './text'
