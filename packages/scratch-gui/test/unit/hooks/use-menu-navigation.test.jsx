@@ -124,6 +124,37 @@ describe('useMenuNavigation', () => {
         expect(focusSpy).toHaveBeenCalled();
     });
 
+    // CUSTOM
+    test('handleOnClose leaves focus on a field outside the menu that the user clicked into', () => {
+        const {result} = renderHook(() => useMenuNavigation({depth: 1}), {
+            wrapper: createWrapper
+        });
+        // Like the real menu button, the menu can take focus.
+        menuRef.current.tabIndex = 0;
+        result.current.menuRef.current = menuRef.current;
+        const field = document.createElement('textarea');
+        document.body.appendChild(field);
+        field.focus();
+
+        result.current.handleOnClose();
+
+        expect(menuContextMock.closeMenuByRef).toHaveBeenCalledWith(result.current.menuRef);
+        expect(document.activeElement).toBe(field);
+    });
+
+    test('handleOnClose restores focus from an item inside the menu', () => {
+        const {result} = renderHook(() => useMenuNavigation({depth: 1}), {
+            wrapper: createWrapper
+        });
+        menuRef.current.tabIndex = 0;
+        result.current.menuRef.current = menuRef.current;
+        item1.focus();
+
+        result.current.handleOnClose();
+
+        expect(document.activeElement).toBe(menuRef.current);
+    });
+
     test('handleKeyDownOpenMenu ArrowDown moves focus to next item', () => {
         item1.focus();
 

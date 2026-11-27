@@ -143,7 +143,11 @@ export default function useMenuNavigation ({
     const handleOnClose = useCallback(menuRefToClose => {
         const ref = menuRefToClose || menuRef;
         menuContext.closeMenuByRef(ref);
-        ref?.current?.focus();
+        // CUSTOM: a click outside closes the menu after the clicked element has taken focus (a text box, for
+        // example); moving focus back to the menu would send the user's typing to the menu button instead.
+        const active = document.activeElement;
+        const focusIsElsewhere = active && active !== document.body && !ref?.current?.contains(active);
+        if (!focusIsElsewhere) ref?.current?.focus();
     }, [menuContext, menuRef]);
 
     const handleOnCloseAllMenus = useCallback(() => {
