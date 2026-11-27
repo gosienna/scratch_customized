@@ -1,5 +1,11 @@
+const fs = require('fs');
 const path = require('path');
 const webpack = require('webpack');
+
+// CUSTOM: local build settings (GOOGLE_CLIENT_ID, GOOGLE_PICKER_API_KEY, ...) from the repository's .env, if present.
+// Variables already set in the environment (e.g. by CI) take precedence.
+const ENV_FILE = path.resolve(__dirname, '../../.env');
+if (fs.existsSync(ENV_FILE)) process.loadEnvFile(ENV_FILE);
 
 // Plugins
 const CopyWebpackPlugin = require('copy-webpack-plugin');
@@ -77,8 +83,11 @@ const baseConfig = new ScratchWebpackConfigBuilder(
         'process.env.GA_ID': `"${process.env.GA_ID || 'UA-000000-01'}"`,
         'process.env.GTM_ENV_AUTH': `"${process.env.GTM_ENV_AUTH || ''}"`,
         'process.env.GTM_ID': process.env.GTM_ID ? `"${process.env.GTM_ID}"` : null,
-        // CUSTOM: OAuth client ID for Google Drive storage (public; empty disables Drive).
+        // CUSTOM: OAuth client ID for Google Drive storage (public; empty disables Drive), and the Picker's API key
+        // and Cloud project number (public; an empty key hides the Drive folder Picker).
         'process.env.GOOGLE_CLIENT_ID': JSON.stringify(process.env.GOOGLE_CLIENT_ID || ''),
+        'process.env.GOOGLE_PICKER_API_KEY': JSON.stringify(process.env.GOOGLE_PICKER_API_KEY || ''),
+        'process.env.GOOGLE_APP_ID': JSON.stringify(process.env.GOOGLE_APP_ID || ''),
         // CUSTOM: CORS proxy for pushing version history to GitHub/GitLab (empty: ask the user).
         'process.env.GIT_CORS_PROXY': JSON.stringify(process.env.GIT_CORS_PROXY || '')
     }))
@@ -170,6 +179,36 @@ const distStandaloneConfig = baseConfig.clone()
 const buildConfig = baseConfig.clone()
     .enableDevServer(process.env.PORT || 8601)
     .merge({
+        // CUSTOM: webpack-dev-server's cross-origin check rejects cross-site script loads (403) and marks responses
+        // `Cross-Origin-Resource-Policy: same-origin`. The sandboxed iframes of scratch-svg-renderer (SVG
+        // measurement, needed e.g. by Paint > new sprite) and scratch-paint have an opaque origin, so their scripts
+        // in static/assets/ are cross-site loads: without this the sandboxes never answer. Only those scripts are
+        // let through; static hosting (GitHub Pages) has no such check.
+        devServer: {
+            setupMiddlewares: middlewares => {
+                const check = middlewares.findIndex(entry => entry.name === 'cross-origin-header-check');
+                if (check < 0) {
+                    throw new Error('webpack.config.js: webpack-dev-server has no cross-origin-header-check ' +
+                        'middleware; review the sandbox script exemption');
+                }
+                const isSandboxScript = req => /^\/static\/assets\/[^/]+\.js$/.test(req.path);
+                middlewares.splice(check + 1, 0, {
+                    name: 'sandbox-scripts-allow-cross-origin',
+                    middleware: (req, res, next) => {
+                        if (isSandboxScript(req)) res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+                        next();
+                    }
+                });
+                middlewares.splice(check, 0, {
+                    name: 'sandbox-scripts-skip-cross-site-check',
+                    middleware: (req, res, next) => {
+                        if (isSandboxScript(req)) delete req.headers['sec-fetch-site'];
+                        next();
+                    }
+                });
+                return middlewares;
+            }
+        },
         entry: {
             gui: './src/playground/index.jsx',
             guistandalone: './src/playground/standalone.jsx',
