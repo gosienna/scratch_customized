@@ -49,7 +49,7 @@ import {PLATFORM} from '../../lib/platform.js';
 import {MenuRefProvider} from '../../contexts/menu-ref-context.jsx';
 import {ModalFocusProvider} from '../../contexts/modal-focus-context.jsx';
 // CUSTOM
-import ProjectStorageModal from '../../containers/customized/project-storage-modal.jsx';
+import ProjectLibrary from '../../containers/customized/project-library.jsx';
 import TextCodePanel from '../../containers/customized/text-code-panel.jsx';
 import HistoryModal from '../../containers/customized/history-modal.jsx';
 import StageResizer from '../../containers/customized/stage-resizer.jsx';
@@ -337,7 +337,7 @@ const GUIComponent = props => {
                         onClose={onCloseDebugModal}
                     />}
                     {/* CUSTOM */}
-                    <ProjectStorageModal />
+                    <ProjectLibrary />
                     <HistoryModal />
                     {backdropLibraryVisible ? (
                         <BackdropLibrary

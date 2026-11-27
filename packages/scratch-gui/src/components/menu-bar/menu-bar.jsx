@@ -75,6 +75,8 @@ import sharedMessages from '../../lib/shared-messages';
 
 import {AccountMenuOptionsPropTypes} from '../../lib/account-menu-options';
 import AccountMenu from './account-menu.jsx';
+import {openProjectStorage} from '../../reducers/project-storage'; // CUSTOM
+import VcsBar from '../../containers/customized/vcs-bar.jsx'; // CUSTOM
 
 const ariaMessages = defineMessages({
     tutorials: {
@@ -400,6 +402,8 @@ class MenuBar extends React.Component {
                             avatarBadge={this.props.authorAvatarBadge}
                         />
                     ) : null)}
+                    {/* CUSTOM: the branch the next commit goes to, and the Commit button. */}
+                    <VcsBar />
                     <div className={classNames(styles.menuBarItem)}>
                         {this.props.canShare ? (
                             (this.props.isShowingProject || this.props.isUpdating) && (
@@ -582,20 +586,21 @@ class MenuBar extends React.Component {
                         <React.Fragment>
                             {this.props.showComingSoon ? (
                                 <React.Fragment>
-                                    <MenuBarItemTooltip id="mystuff">
-                                        <div
-                                            className={classNames(
-                                                styles.menuBarItem,
-                                                styles.hoverable,
-                                                styles.mystuffButton
-                                            )}
-                                        >
-                                            <img
-                                                className={styles.mystuffIcon}
-                                                src={mystuffIcon}
-                                            />
-                                        </div>
-                                    </MenuBarItemTooltip>
+                                    {/* CUSTOM: the folder icon opens the My Projects page. */}
+                                    <button
+                                        aria-label={this.props.intl.formatMessage(ariaMessages.myStuff)}
+                                        className={classNames(
+                                            styles.menuBarItem,
+                                            styles.hoverable,
+                                            styles.mystuffButton
+                                        )}
+                                        onClick={this.props.onClickMyProjects}
+                                    >
+                                        <img
+                                            className={styles.mystuffIcon}
+                                            src={mystuffIcon}
+                                        />
+                                    </button>
                                     <MenuBarItemTooltip
                                         id="account-nav"
                                         place={this.props.isRtl ? 'right' : 'left'}
@@ -690,6 +695,7 @@ MenuBar.propTypes = {
     onClickMode: PropTypes.func,
     onClickNew: PropTypes.func,
     onClickRemix: PropTypes.func,
+    onClickMyProjects: PropTypes.func, // CUSTOM
     onClickSave: PropTypes.func,
     onClickSaveAsCopy: PropTypes.func,
     onLogOut: PropTypes.func,
@@ -776,6 +782,7 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     onClickNew: needSave => dispatch(requestNewProject(needSave)),
     onClickLogin: ownProps.onClickLogin ?? (() => dispatch(openLoginMenu())),
     onClickSave: () => dispatch(manualUpdateProject()),
+    onClickMyProjects: () => dispatch(openProjectStorage('projects')), // CUSTOM
     onClickRemix: () => dispatch(remixProject()),
     onRequestCloseLogin: () => dispatch(closeLoginMenu()),
     onSeeCommunity: ownProps.onSeeCommunity ?? (() => dispatch(setPlayer(true))),

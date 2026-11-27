@@ -12,7 +12,7 @@ import git, { type PromiseFsClient } from 'isomorphic-git'
 import http from 'isomorphic-git/http/web'
 import JSZip from 'jszip'
 import type { SerializedProject } from '../sb3/types'
-import { fileNameFor } from '../storage/types'
+import { safeFileName } from '../storage/types'
 import { targetToText } from '../text'
 
 export interface ProjectRepo {
@@ -52,8 +52,9 @@ const join = (...parts: string[]) => parts.join('/').replace(/\/+/g, '/')
 
 /** The file operations used here (isomorphic-git types its file system loosely). */
 interface FileOps {
-  stat: (path: string) => Promise<unknown>
+  stat: (path: string) => Promise<{ isDirectory: () => boolean }>
   mkdir: (path: string) => Promise<void>
+  rmdir: (path: string) => Promise<void>
   readdir: (path: string) => Promise<string[]>
   writeFile: (path: string, data: string | Uint8Array, encoding?: string) => Promise<void>
   unlink: (path: string) => Promise<void>
@@ -88,7 +89,58 @@ export const openProjectRepo = async (fs: PromiseFsClient, dir: string): Promise
   return { fs, dir }
 }
 
-const textFileFor = (spriteName: string) => fileNameFor(spriteName).replace(/\.sb3$/, '.py')
+/** Settings kept in a repository's Git config, under `scratch.`. */
+export type RepoSetting = 'name' | 'backupKind' | 'backupId' | 'syncedToken'
+
+export const getRepoSetting = async (repo: ProjectRepo, key: RepoSetting): Promise<string | undefined> =>
+  ((await git.getConfig({ ...repo, path: `scratch.${key}` })) as string | undefined) ?? undefined
+
+/** Set a setting; `undefined` removes it. */
+export const setRepoSetting = async (repo: ProjectRepo, key: RepoSetting, value: string | undefined) => {
+  await git.setConfig({ ...repo, path: `scratch.${key}`, value })
+}
+
+export interface RepoSummary {
+  /** The repository's directory name under the root. */
+  id: string
+  name: string
+  /** When the newest version on the current branch was saved (milliseconds since the epoch); 0 if none was. */
+  modified: number
+  backupKind?: string
+  backupId?: string
+}
+
+/** The project repositories under `root`, newest first. */
+export const listProjectRepos = async (fs: PromiseFsClient, root: string): Promise<RepoSummary[]> => {
+  const summaries: RepoSummary[] = []
+  for (const id of await listFiles(fs, root)) {
+    const dir = join(root, id)
+    if (!(await exists(fs, join(dir, '.git')))) continue
+    const repo = { fs, dir }
+    const [latest] = await git.log({ ...repo, depth: 1 }).catch(() => [])
+    summaries.push({
+      id,
+      // Repositories made before names were kept in the config are named by their directory.
+      name: (await getRepoSetting(repo, 'name')) ?? decodeURIComponent(id),
+      modified: latest ? latest.commit.author.timestamp * 1000 : 0,
+      backupKind: await getRepoSetting(repo, 'backupKind'),
+      backupId: await getRepoSetting(repo, 'backupId'),
+    })
+  }
+  return summaries.sort((a, b) => b.modified - a.modified)
+}
+
+/** Delete a directory and everything in it. */
+export const removeDirectory = async (fs: PromiseFsClient, dir: string): Promise<void> => {
+  for (const name of await listFiles(fs, dir)) {
+    const path = join(dir, name)
+    if ((await ops(fs).stat(path)).isDirectory()) await removeDirectory(fs, path)
+    else await ops(fs).unlink(path)
+  }
+  await ops(fs).rmdir(dir)
+}
+
+const textFileFor = (spriteName: string) => `${safeFileName(spriteName)}.py`
 
 /** Write the files for an .sb3 into the working directory, removing files the project no longer has. */
 const writeWorkingTree = async ({ fs, dir }: ProjectRepo, sb3: ArrayBuffer) => {
@@ -193,6 +245,10 @@ export const readVersion = async (repo: ProjectRepo, oid: string): Promise<Array
   }
   return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' })
 }
+
+/** The commit the current branch points to, or undefined before the first version is saved. */
+export const headVersion = async (repo: ProjectRepo): Promise<string | undefined> =>
+  git.resolveRef({ ...repo, ref: 'HEAD' }).catch(() => undefined)
 
 /** What changed from version `from` to version `to`. */
 export const diffVersions = async (repo: ProjectRepo, from: string, to: string): Promise<VersionDiff> => {

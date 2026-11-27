@@ -1,32 +1,35 @@
-// CUSTOM: version history (Git) for the current project — save versions, compare, restore, branch, push.
+// CUSTOM: version history (Git) for the current project — save versions, compare, restore or download them,
+// branch, push.
 import PropTypes from 'prop-types';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {defineMessages, useIntl} from 'react-intl';
 import {connect} from 'react-redux';
 import {
-    commitProject,
-    createBranch,
     currentBranch,
     diffVersions,
-    getBrowserGitFs,
+    fileNameFor,
     listBranches,
     listVersions,
-    openProjectRepo,
     pushToRemote,
-    readVersion,
-    repoDirFor,
-    switchBranch
+    readVersion
 } from '@scratch-customized/platform';
 
 import Modal from '../modal.jsx';
+import downloadBlob from '../../lib/download-blob';
 import {reloadProject} from '../../lib/customized/reload-project';
-import {closeProjectStorage} from '../../reducers/project-storage';
-import {setProjectChanged} from '../../reducers/project-changed';
+import {
+    createProjectBranch,
+    openRepo,
+    saveProject,
+    switchProjectBranch
+} from '../../lib/customized/project-repo';
+import {closeProjectStorage, setStoredProject} from '../../reducers/project-storage';
+import {setProjectChanged, setProjectUnchanged} from '../../reducers/project-changed';
+import {setProjectTitle} from '../../reducers/project-title';
 
 import styles from './history-modal.css';
 
 const DEFAULT_CORS_PROXY = process.env.GIT_CORS_PROXY || 'https://cors.isomorphic-git.org';
-const AUTHOR = {name: 'Scratch Customized user'};
 
 const messages = defineMessages({
     title: {id: 'gui.customized.history.title', defaultMessage: 'Version history', description: 'Title'},
@@ -48,6 +51,21 @@ const messages = defineMessages({
     none: {id: 'gui.customized.history.none', defaultMessage: 'No versions yet.', description: 'Empty list'},
     changes: {id: 'gui.customized.history.changes', defaultMessage: 'Changes', description: 'Button'},
     restore: {id: 'gui.customized.history.restore', defaultMessage: 'Open this version', description: 'Button'},
+    download: {
+        id: 'gui.customized.history.download',
+        defaultMessage: 'Download .sb3',
+        description: 'Button: save this version as a .sb3 file that official Scratch opens'
+    },
+    notSaved: {
+        id: 'gui.customized.history.notSaved',
+        defaultMessage: 'This project has no versions yet. Save one to start its history.',
+        description: 'Shown in the history dialog before the first commit'
+    },
+    savedNotBackedUp: {
+        id: 'gui.customized.history.savedNotBackedUp',
+        defaultMessage: 'Version saved in this browser, but not backed up: {error}',
+        description: 'Status when the commit worked and the upload to a folder or Drive did not'
+    },
     confirmRestore: {
         id: 'gui.customized.history.confirmRestore',
         defaultMessage: 'Open this version? Changes since the last saved version will be lost.',
@@ -144,7 +162,7 @@ const useCallbackRef = handler => {
     return useCallback((...args) => ref.current(...args), []);
 };
 
-const HistoryModal = ({projectTitle, projectChanged, vm, onClose, onProjectChanged}) => {
+const HistoryModal = ({current, projectTitle, projectChanged, vm, onClose, onProjectChanged, onStored}) => {
     const intl = useIntl();
     const [repo, setRepo] = useState(null);
     const [branch, setBranch] = useState('main');
@@ -164,14 +182,17 @@ const HistoryModal = ({projectTitle, projectChanged, vm, onClose, onProjectChang
         setVersions(await listVersions(activeRepo));
     }, []);
 
+    const repoId = current?.repoId;
     useEffect(() => {
-        openProjectRepo(getBrowserGitFs(), repoDirFor(projectTitle))
+        // A project without a repository gets one on its first save.
+        if (!repoId) return;
+        openRepo(repoId)
             .then(async opened => {
                 setRepo(opened);
                 await refresh(opened);
             })
             .catch(e => setError(e.message));
-    }, [projectTitle, refresh]);
+    }, [repoId, refresh]);
 
     const run = async action => {
         setBusy(true);
@@ -186,17 +207,17 @@ const HistoryModal = ({projectTitle, projectChanged, vm, onClose, onProjectChang
         }
     };
 
-    const loadIntoEditor = async sb3 => {
-        await reloadProject(vm, sb3);
-        onProjectChanged();
-    };
-
     const handleSave = useCallbackRef(() => run(async () => {
-        const sb3 = await (await vm.saveProjectSb3()).arrayBuffer();
-        const oid = await commitProject(repo, sb3, message.trim() || 'Saved version', AUTHOR);
-        setStatus(intl.formatMessage(oid ? messages.saved : messages.nothingChanged));
+        const result = await saveProject({vm, current, name: projectTitle, message});
+        onStored(result.current, result.branch);
+        if (result.backupError) {
+            setError(intl.formatMessage(messages.savedNotBackedUp, {error: result.backupError.message}));
+        } else {
+            setStatus(intl.formatMessage(result.committed ? messages.saved : messages.nothingChanged));
+        }
         setMessage('');
-        await refresh(repo);
+        // The first save makes the repository, which the effect above then opens.
+        if (repo) await refresh(repo);
     }));
 
     const versionIndex = event => versions.findIndex(version => version.oid === event.currentTarget.dataset.oid);
@@ -219,15 +240,27 @@ const HistoryModal = ({projectTitle, projectChanged, vm, onClose, onProjectChang
         const question = intl.formatMessage(messages.confirmRestore);
         if (projectChanged && !confirm(question)) return; // eslint-disable-line no-alert
         const version = versions[versionIndex(event)];
-        run(async () => loadIntoEditor(await readVersion(repo, version.oid)));
+        run(async () => {
+            await reloadProject(vm, await readVersion(repo, version.oid));
+            // The editor now differs from the latest version, until it is saved again.
+            onProjectChanged();
+        });
     });
+
+    const handleDownload = useCallbackRef(event => run(async () => {
+        const version = versions[versionIndex(event)];
+        const sb3 = await readVersion(repo, version.oid);
+        const fileName = fileNameFor(projectTitle).replace(/\.scratch\.bundle$/, '.sb3');
+        downloadBlob(fileName, new Blob([sb3], {type: 'application/x.scratch.sb3'}));
+    }));
 
     const handleBranchChange = useCallbackRef(event => {
         const name = event.target.value;
         const question = intl.formatMessage(messages.confirmSwitch);
         if (projectChanged && !confirm(question)) return; // eslint-disable-line no-alert
         run(async () => {
-            await loadIntoEditor(await switchBranch(repo, name));
+            await switchProjectBranch(vm, repoId, name);
+            onStored(current, name, true);
             await refresh(repo);
         });
     });
@@ -237,7 +270,8 @@ const HistoryModal = ({projectTitle, projectChanged, vm, onClose, onProjectChang
         const name = (prompt(question) ?? '').trim(); // eslint-disable-line no-alert
         if (!name) return;
         run(async () => {
-            await createBranch(repo, name);
+            await createProjectBranch(repoId, name);
+            onStored(current, name);
             await refresh(repo);
         });
     });
@@ -252,7 +286,7 @@ const HistoryModal = ({projectTitle, projectChanged, vm, onClose, onProjectChang
     const handleMessageChange = useCallbackRef(event => setMessage(event.target.value));
     const handleRemoteChange = useCallbackRef(event => {
         const {name, value} = event.target;
-        setRemote(current => ({...current, [name]: value}));
+        setRemote(previous => ({...previous, [name]: value}));
     });
 
     return (
@@ -297,7 +331,7 @@ const HistoryModal = ({projectTitle, projectChanged, vm, onClose, onProjectChang
                     />
                     <button
                         className={styles.primary}
-                        disabled={busy || !repo}
+                        disabled={busy}
                         onClick={handleSave}
                     >
                         {intl.formatMessage(messages.save)}
@@ -305,7 +339,9 @@ const HistoryModal = ({projectTitle, projectChanged, vm, onClose, onProjectChang
                 </div>
                 {status && <p className={styles.status}>{status}</p>}
                 {error && <p className={styles.error}>{error}</p>}
-                {versions.length === 0 && <p className={styles.hint}>{intl.formatMessage(messages.none)}</p>}
+                {versions.length === 0 && (
+                    <p className={styles.hint}>{intl.formatMessage(repoId ? messages.none : messages.notSaved)}</p>
+                )}
                 <ul className={styles.versions}>
                     {versions.map(version => (
                         <li key={version.oid}>
@@ -327,6 +363,13 @@ const HistoryModal = ({projectTitle, projectChanged, vm, onClose, onProjectChang
                                     onClick={handleRestore}
                                 >
                                     {intl.formatMessage(messages.restore)}
+                                </button>
+                                <button
+                                    data-oid={version.oid}
+                                    disabled={busy}
+                                    onClick={handleDownload}
+                                >
+                                    {intl.formatMessage(messages.download)}
                                 </button>
                             </div>
                             {diffOid === version.oid && diff && <DiffView diff={diff} />}
@@ -375,11 +418,13 @@ const HistoryModal = ({projectTitle, projectChanged, vm, onClose, onProjectChang
 };
 
 HistoryModal.propTypes = {
+    current: PropTypes.shape({repoId: PropTypes.string}),
     projectTitle: PropTypes.string.isRequired,
     projectChanged: PropTypes.bool,
     vm: PropTypes.shape({saveProjectSb3: PropTypes.func}).isRequired,
     onClose: PropTypes.func.isRequired,
-    onProjectChanged: PropTypes.func.isRequired
+    onProjectChanged: PropTypes.func.isRequired,
+    onStored: PropTypes.func.isRequired
 };
 
 /* eslint-disable react/prop-types -- props of the connected wrapper, passed straight through. */
@@ -388,6 +433,7 @@ const HistoryModalWrapper = ({open, ...props}) => (open ? <HistoryModal {...prop
 
 const mapStateToProps = state => ({
     open: state.scratchGui.projectStorage.dialog === 'history',
+    current: state.scratchGui.projectStorage.current,
     projectTitle: state.scratchGui.projectTitle || 'Project',
     projectChanged: state.scratchGui.projectChanged,
     vm: state.scratchGui.vm
@@ -395,7 +441,17 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = dispatch => ({
     onClose: () => dispatch(closeProjectStorage()),
-    onProjectChanged: () => dispatch(setProjectChanged())
+    onProjectChanged: () => dispatch(setProjectChanged()),
+    /**
+     * @param {object} current - the project's repository.
+     * @param {string} branch - its current branch.
+     * @param {boolean} [loaded] - the editor now shows that branch's latest version.
+     */
+    onStored: (current, branch, loaded = false) => {
+        dispatch(setStoredProject(current, branch));
+        dispatch(setProjectTitle(current.name));
+        if (loaded) dispatch(setProjectUnchanged());
+    }
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(HistoryModalWrapper);

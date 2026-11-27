@@ -7,6 +7,7 @@ import {DEFAULT_MODE} from '../../../src/lib/settings/color-mode';
 import {fireEvent} from '@testing-library/react';
 
 import {PLATFORM} from '../../../src/lib/platform';
+import {projectStorageInitialState} from '../../../src/reducers/project-storage'; // CUSTOM
 
 import configureStore from 'redux-mock-store';
 import {Provider} from 'react-redux';
@@ -21,6 +22,7 @@ describe('MenuBar Component', () => {
         },
         scratchGui: {
             menus: menuInitialState,
+            projectStorage: projectStorageInitialState, // CUSTOM: read by the branch chip and Commit button
             projectState: {
                 loadingState: LoadingState.NOT_LOADED
             },

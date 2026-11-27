@@ -21,7 +21,10 @@ editor-only feature needs a lowering, a raising rule, and a runtime that behaves
 
 ### Where things are
 - `packages/platform/` (TypeScript, Vite, Vitest): compat (lower/raise), expr (typed expressions), runtime
-  (VM primitives), storage, text (Python/JS text mode), vcs (Git history). The GUI imports its **built** `dist/`.
+  (VM primitives), storage (folder / Drive backups), text (Python/JS text mode), vcs (Git history; `bundle.ts` packs
+  a repository into the one-file backup). The GUI imports its **built** `dist/`.
+- Projects are Git repositories in the browser (LightningFS); Save = commit. `scratch-gui/src/lib/customized/
+  project-repo.js` commits, backs up and opens projects; a `.sb3` is only ever made on export.
 - `packages/scratch-gui/src/{lib,containers}/customized/` and `reducers/{editor-mode,project-storage}.js`: the
   GUI side. Edits to upstream files are marked `// CUSTOM`.
 - `packages/scratch-vm/src/virtual-machine.js`: the transform hook (`setProjectTransforms`, `addPrimitives`).

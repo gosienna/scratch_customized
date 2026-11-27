@@ -1,6 +1,9 @@
 /** The browser file system that holds project repositories (in IndexedDB, via LightningFS). */
 import LightningFS from '@isomorphic-git/lightning-fs'
 import type { PromiseFsClient } from 'isomorphic-git'
+import { listProjectRepos, removeDirectory, type RepoSummary } from './repo'
+
+const PROJECTS_ROOT = '/projects'
 
 let browserFs: PromiseFsClient | undefined
 
@@ -9,6 +12,15 @@ export const getBrowserGitFs = (): PromiseFsClient => {
   return browserFs
 }
 
-/** The repository directory for a project name. */
-export const repoDirFor = (projectName: string): string =>
-  `/projects/${encodeURIComponent(projectName.trim() || 'Project')}`
+/** A new, unique repository ID. */
+export const newProjectId = (): string => crypto.randomUUID()
+
+/** The repository directory for a repository ID. */
+export const repoDirFor = (id: string): string => `${PROJECTS_ROOT}/${id}`
+
+/** The project repositories in this browser, newest first. */
+export const listBrowserRepos = (fs: PromiseFsClient = getBrowserGitFs()): Promise<RepoSummary[]> =>
+  listProjectRepos(fs, PROJECTS_ROOT)
+
+export const deleteBrowserRepo = (id: string, fs: PromiseFsClient = getBrowserGitFs()): Promise<void> =>
+  removeDirectory(fs, repoDirFor(id))

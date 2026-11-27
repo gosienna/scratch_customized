@@ -35,9 +35,8 @@ const FileMenu = ({
     onClickRemix,
     onStartSelectingFileUpload,
     getSaveToComputerHandler,
-    onClickOpenFromStorage,
-    onClickSaveToStorage,
     onClickHistory,
+    onClickCommit,
     remixMessage,
     depth
 }) => {
@@ -56,18 +55,14 @@ const FileMenu = ({
     });
 
     // CUSTOM: these items open dialogs, so the menu closes first (it would otherwise keep the keyboard focus).
-    const handleOpenFromStorage = useCallback(() => {
-        handleOnClose();
-        onClickOpenFromStorage();
-    }, [handleOnClose, onClickOpenFromStorage]);
-    const handleSaveToStorage = useCallback(() => {
-        handleOnClose();
-        onClickSaveToStorage();
-    }, [handleOnClose, onClickSaveToStorage]);
     const handleHistory = useCallback(() => {
         handleOnClose();
         onClickHistory();
     }, [handleOnClose, onClickHistory]);
+    const handleCommit = useCallback(() => {
+        handleOnClose();
+        onClickCommit();
+    }, [handleOnClose, onClickCommit]);
 
     const saveNowMessage = (
         <FormattedMessage
@@ -159,25 +154,14 @@ const FileMenu = ({
                 )}
                 <MenuSection>
                     <MenuItem
-                        onClick={handleOpenFromStorage}
+                        onClick={handleCommit}
                         isDataMenuItem
                         onParentKeyDown={handleKeyDownOpenMenu}
                     >
                         <FormattedMessage
-                            defaultMessage="Open from browser, folder or Drive…"
-                            description="Menu bar item for opening a project from project storage"
-                            id="gui.customized.menuBar.openFromStorage"
-                        />
-                    </MenuItem>
-                    <MenuItem
-                        onClick={handleSaveToStorage}
-                        isDataMenuItem
-                        onParentKeyDown={handleKeyDownOpenMenu}
-                    >
-                        <FormattedMessage
-                            defaultMessage="Save to browser, folder or Drive…"
-                            description="Menu bar item for saving a project to project storage"
-                            id="gui.customized.menuBar.saveToStorage"
+                            defaultMessage="Save now (commit)"
+                            description="Menu bar item that saves a version of the project to its Git history"
+                            id="gui.customized.menuBar.commit"
                         />
                     </MenuItem>
                     <MenuItem
@@ -231,9 +215,8 @@ FileMenu.propTypes = {
     onClickRemix: PropTypes.func,
     onClickNew: PropTypes.func.isRequired,
     getSaveToComputerHandler: PropTypes.func.isRequired,
-    onClickOpenFromStorage: PropTypes.func.isRequired,
-    onClickSaveToStorage: PropTypes.func.isRequired,
     onClickHistory: PropTypes.func.isRequired,
+    onClickCommit: PropTypes.func.isRequired,
     remixMessage: PropTypes.node,
     depth: PropTypes.number
 };
@@ -244,9 +227,8 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = dispatch => ({
     onClickSaveAsCopy: () => dispatch(saveProjectAsCopy()),
-    onClickOpenFromStorage: () => dispatch(openProjectStorage('open')),
-    onClickSaveToStorage: () => dispatch(openProjectStorage('save')),
-    onClickHistory: () => dispatch(openProjectStorage('history'))
+    onClickHistory: () => dispatch(openProjectStorage('history')),
+    onClickCommit: () => dispatch(openProjectStorage('commit'))
 });
 
 export default connect(
