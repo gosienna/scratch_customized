@@ -16,11 +16,13 @@ export * from './local-vars'
 export { createPrimitives, installPrimitives } from './runtime/primitives'
 
 export * from './storage/types'
-export { createIndexedDbStore, getSetting, setSetting } from './storage/indexeddb-store'
+export { getSetting, legacyBrowserProjects, setSetting } from './storage/indexeddb-store'
+export type { LegacyBrowserProjects } from './storage/indexeddb-store'
 export { createFolderStore } from './storage/folder-store'
 export type { FolderStore } from './storage/folder-store'
-export { createDriveStore, googleIdentityTokenProvider } from './storage/drive-store'
-export type { AccessToken, TokenProvider } from './storage/drive-store'
+export { createDriveStore, googleIdentityTokenProvider, parseDriveFolderId } from './storage/drive-store'
+export type { AccessToken, DriveAccount, DriveFolder, DriveStore, TokenProvider } from './storage/drive-store'
+export { pickDriveFolder } from './storage/drive-picker'
 
 export { applyText, targetToText, TextSyntaxError } from './text'
 export type { TextDialect } from './text'
@@ -30,12 +32,20 @@ export {
   createBranch,
   currentBranch,
   diffVersions,
+  getRepoSetting,
+  headVersion,
   listBranches,
+  listProjectRepos,
   listVersions,
   openProjectRepo,
   pushToRemote,
   readVersion,
+  setRepoSetting,
   switchBranch,
 } from './vcs/repo'
-export type { Author, ProjectRepo, RemoteOptions, Version, VersionDiff } from './vcs/repo'
-export { getBrowserGitFs, repoDirFor } from './vcs/browser-fs'
+export type { Author, ProjectRepo, RemoteOptions, RepoSetting, RepoSummary, Version, VersionDiff } from './vcs/repo'
+export { deleteBrowserRepo, getBrowserGitFs, listBrowserRepos, newProjectId, repoDirFor } from './vcs/browser-fs'
+export { bundleToken, cloneBundle, createBundle, parseBundle, repoToken, syncFromBundle } from './vcs/bundle'
+export type { Bundle, ParsedBundle, SyncResult } from './vcs/bundle'
+
+export * from './assistant'

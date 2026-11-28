@@ -1,14 +1,21 @@
-/** Where projects can be kept. Every store reads and writes complete .sb3 files. */
+/**
+ * Where projects can be kept. A store reads and writes opaque project files: Git bundles holding a project's whole
+ * history (see `vcs/bundle.ts`), and, for importing, plain .sb3 files saved before projects were kept in Git.
+ */
 
 export type StoreKind = 'browser' | 'folder' | 'drive'
+
+/** What a stored file holds: a project's Git history, or a single .sb3 (only ever read, to import it). */
+export type ProjectFormat = 'bundle' | 'sb3'
 
 export interface ProjectInfo {
   /** Identifies the project within its store (a key, a file name, or a Drive file ID). */
   id: string
   name: string
+  format: ProjectFormat
   /** Last modification time, in milliseconds since the epoch. */
   modified: number
-  /** Size of the .sb3 file in bytes, when the store knows it. */
+  /** Size of the file in bytes, when the store knows it. */
   size?: number
 }
 
@@ -25,22 +32,51 @@ export interface ProjectStore {
   connect: () => Promise<void>
   list: () => Promise<ProjectInfo[]>
   load: (id: string) => Promise<ArrayBuffer>
-  /** Save a project. Without `id` a new project is created; with `id` that project is replaced. */
-  save: (name: string, data: ArrayBuffer, id?: string) => Promise<ProjectInfo>
+  /**
+   * Save a project bundle. Without `id` a new file is created; with `id` that file is replaced. `thumbnail` is a
+   * picture of the stage (PNG), kept beside the file. `token` identifies the bundle's contents (see
+   * `bundleToken`); `token(id)` returns it later without downloading the file.
+   */
+  save: (name: string, data: Uint8Array, options?: SaveOptions) => Promise<ProjectInfo>
+  /** The token the file was last saved with, or undefined for files without one (e.g. .sb3 files). */
+  token: (id: string) => Promise<string | undefined>
+  /** The project's thumbnail, if one was saved with it. */
+  thumbnail: (id: string) => Promise<Blob | undefined>
   /** Remove a project. Stores that have a trash (Google Drive) move the project there instead of deleting it. */
   remove: (id: string) => Promise<void>
 }
 
-export const SB3_MIME_TYPE = 'application/x.scratch.sb3'
-
-/** A file name for a project: its name without characters that file systems reject, plus `.sb3`. */
-export const fileNameFor = (projectName: string): string => {
-  const cleaned = projectName
-    .replace(/[\\/:*?"<>|]/g, '_')
-    .replace(/[\s.]+$/, '')
-    .trim()
-  return `${cleaned || 'Project'}.sb3`
+export interface SaveOptions {
+  id?: string
+  thumbnail?: Blob
+  token?: string
 }
 
-/** The project name for a file name: the name without its `.sb3` extension. */
-export const projectNameFor = (fileName: string): string => fileName.replace(/\.sb3$/i, '')
+export const SB3_MIME_TYPE = 'application/x.scratch.sb3'
+export const BUNDLE_MIME_TYPE = 'application/x-git-bundle'
+export const BUNDLE_EXTENSION = '.scratch.bundle'
+
+/** A name without characters that file systems reject (and without trailing dots and spaces). */
+export const safeFileName = (name: string): string =>
+  name
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/[\s.]+$/, '')
+    .trim() || 'Project'
+
+/** The bundle file name for a project. */
+export const fileNameFor = (projectName: string): string => `${safeFileName(projectName)}${BUNDLE_EXTENSION}`
+
+/** The format of a stored file, from its name; undefined for files that are not projects. */
+export const formatOf = (fileName: string): ProjectFormat | undefined => {
+  const lower = fileName.toLowerCase()
+  if (lower.endsWith(BUNDLE_EXTENSION)) return 'bundle'
+  if (lower.endsWith('.sb3')) return 'sb3'
+  return undefined
+}
+
+/** The project name for a file name: the name without its extension. */
+export const projectNameFor = (fileName: string): string => {
+  const format = formatOf(fileName)
+  if (!format) return fileName
+  return fileName.slice(0, fileName.length - (format === 'bundle' ? BUNDLE_EXTENSION.length : '.sb3'.length))
+}

@@ -26,8 +26,10 @@ jobs:
       - uses: ./.github/actions/install-dependencies
       - name: Build the site
         env:
-          # Repository variables (Settings > Secrets and variables > Actions > Variables). Both are public values.
+          # Repository variables (Settings > Secrets and variables > Actions > Variables). All are public values.
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          GOOGLE_PICKER_API_KEY: ${{ vars.GOOGLE_PICKER_API_KEY }}
+          GOOGLE_APP_ID: ${{ vars.GOOGLE_APP_ID }}
           GIT_CORS_PROXY: ${{ vars.GIT_CORS_PROXY }}
         run: npm run build:pages
       - uses: actions/upload-pages-artifact@v4

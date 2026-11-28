@@ -25,6 +25,7 @@ const StageComponent = props => {
         micIndicator,
         question,
         stageSize,
+        stageWidth,
         useEditorDragStyle,
         onDeactivateColorPicker,
         onDoubleClick,
@@ -32,7 +33,7 @@ const StageComponent = props => {
         ...boxProps
     } = props;
 
-    const stageDimensions = getStageDimensions(stageSize, isFullScreen);
+    const stageDimensions = getStageDimensions(stageSize, isFullScreen, stageWidth); // CUSTOM: stageWidth
 
     return (
         <React.Fragment>
@@ -146,6 +147,7 @@ StageComponent.propTypes = {
     onQuestionAnswered: PropTypes.func,
     question: PropTypes.string,
     stageSize: PropTypes.oneOf(Object.keys(STAGE_DISPLAY_SIZES)).isRequired,
+    stageWidth: PropTypes.number, // CUSTOM
     useEditorDragStyle: PropTypes.bool
 };
 StageComponent.defaultProps = {

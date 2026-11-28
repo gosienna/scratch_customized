@@ -10,6 +10,7 @@ import dynamicAssetsReducer, {dynamicAssetsInitialState} from './dynamic-assets'
 import editorTabReducer, {editorTabInitialState} from './editor-tab';
 // CUSTOM
 import editorModeReducer, {editorModeInitialState} from './editor-mode';
+import aiAssistantReducer, {aiAssistantInitialState} from './ai-assistant';
 import projectStorageReducer, {projectStorageInitialState} from './project-storage';
 import hoveredTargetReducer, {hoveredTargetInitialState} from './hovered-target';
 import menuReducer, {menuInitialState} from './menus';
@@ -61,6 +62,7 @@ const buildInitialState = (config: GUIConfig) => ({
     dynamicAssets: dynamicAssetsInitialState,
     editorTab: editorTabInitialState,
     editorMode: editorModeInitialState(),
+    aiAssistant: aiAssistantInitialState(),
     projectStorage: projectStorageInitialState,
     mode: modeInitialState,
     hoveredTarget: hoveredTargetInitialState,
@@ -173,6 +175,7 @@ const guiReducer = combineReducers({
     customProcedures: customProceduresReducer,
     editorTab: editorTabReducer,
     editorMode: editorModeReducer,
+    aiAssistant: aiAssistantReducer,
     projectStorage: projectStorageReducer,
     mode: modeReducer,
     hoveredTarget: hoveredTargetReducer,

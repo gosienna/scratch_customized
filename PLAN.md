@@ -57,9 +57,10 @@ A save-time guard checks that every opcode in the output is in the stock VM's pr
 **Storage** (`packages/platform/src/storage/`): one interface, `ProjectStore { list(), load(id) → ArrayBuffer, save(id, name, ArrayBuffer), remove(id) }`.
 - `IndexedDBStore`: use the `idb` library, store sb3 blobs plus thumbnail and metadata, and autosave.
 - `LocalFolderStore`: `showDirectoryPicker()`, with the directory handle persisted in IndexedDB and permission re-requested on reload. Fall back to download/upload on Firefox and Safari.
-- `GoogleDriveStore`: Google Identity Services token client with the `drive.file` scope and Drive v3 REST multipart upload, using mime `application/x.scratch.sb3`. The OAuth client ID comes from env config (`VITE_`/webpack `DefinePlugin`).
+- `GoogleDriveStore`: Google Identity Services token client with the full `drive` scope and Drive v3 REST multipart upload, using mime `application/x.scratch.sb3`. Projects live in one linked Drive folder (pasted link or Google Picker), which may be shared with the user or in a shared drive. The OAuth client ID, Picker API key and Cloud project number come from env config (webpack `DefinePlugin`).
+- Thumbnails (a PNG of the stage) are kept beside each project, never inside the .sb3: an IndexedDB store, a `.thumbnails/` subfolder, or Drive's `contentHints.thumbnail`.
 - Every backend reads and writes bytes only through `vm.saveProjectSb3()` and `vm.loadProject()`, which pass through the lowering and raising hooks below.
-- Wire this into the gui's File menu (`project-saver-hoc.jsx`, `sb-file-uploader-hoc.jsx`) as "Open from…" and "Save to…" dialogs.
+- The menu bar's folder icon opens a full-window My Projects page (`containers/customized/project-library.jsx`): a card grid with thumbnails per store, a save bar, and prompts to choose a local folder, sign in to Google, or link a Drive folder.
 
 ### Phase 2: Lowering/raising infrastructure
 - Add `packages/platform/src/compat/lower.js` and `raise.js`. These are pure functions over sb3 `project.json` objects, which makes them easy to unit test.
@@ -195,7 +196,10 @@ For each release, take 5 key fixtures and:
 - Releases: a `v*` tag creates a GitHub Release with the zipped `dist/`, so classrooms can self-host offline. The main site always tracks `main`.
 
 **Services a static site cannot host**
-- Google Drive: create a Google Cloud OAuth client with authorized JavaScript origin `https://<user>.github.io` (plus `http://localhost:8601` for dev). Pass the client ID as a repo Actions variable at build time. It is public, so no secret is involved.
+- Google Drive: create a Google Cloud OAuth client with authorized JavaScript origin `https://<user>.github.io` (plus `http://localhost:8601` for dev). Pass the client ID as a repo Actions variable (`GOOGLE_CLIENT_ID`) at build time. It is public, so no secret is involved.
+  - The `drive` scope is restricted: users see an "unverified app" warning until Google verifies the app; add test users on the OAuth consent screen meanwhile.
+  - For the folder Picker, enable the Google Picker API, create an API key restricted to the site origins, and pass it as `GOOGLE_PICKER_API_KEY` with the Cloud project number as `GOOGLE_APP_ID`. Without the key, only pasting a folder link is offered.
+  - For local development, put the same variables in a `.env` file at the repository root (git-ignored); `packages/scratch-gui/webpack.config.js` loads it.
 - Git remote CORS proxy (Phase 4b): deploy `@isomorphic-git/cors-proxy` as a small free Cloudflare Worker (`deploy/cors-proxy/`) and pass its URL at build time. If it is not configured, the remote push/pull UI hides itself and local Git still works.
 - File System Access API and IndexedDB both work on Pages, because it is served over HTTPS.
 
@@ -233,10 +237,12 @@ For each release, take 5 key fixtures and:
 | Typed expressions, mouse up, block-local variable naming, runtime primitives | `packages/platform/src/{expr,runtime}/`, `local-vars.ts` | 120-frame differential run vs. stock blocks |
 | Custom-mode GUI: blocks, scope colors, grouped Variables palette, "Add block-local variable" | `packages/scratch-gui/src/lib/customized/blocks.js` | browser checks |
 | Editor modes (Settings > Editor: Custom / Text / Original Scratch) | `lib/customized/{editor-mode,switch-editor-mode}.js` | browser checks |
-| Storage: browser (IndexedDB), local folder (File System Access), Google Drive | `packages/platform/src/storage/`, `containers/customized/project-storage-modal.jsx` | unit tests (fakes / mocked fetch); browser store checked in Chrome |
+| Projects are Git repositories in the browser; Save = commit; the whole history is backed up as one Git bundle (`<name>.scratch.bundle`) to a local folder or Google Drive folder; old `.sb3` files there are imported; My Projects page with thumbnails | `packages/platform/src/{storage,vcs/bundle.ts}`, `lib/customized/project-repo.js`, `containers/customized/project-library.jsx` | bundle round trip + `git clone`/`fsck` by desktop Git; GUI service test (commit, backup, conflict, open, import); saved to and opened from Drive live |
+| Branch chip and Commit button in the menu bar (Ctrl/Cmd+S, File > Save now) | `containers/customized/vcs-bar.jsx`, `components/customized/vcs-bar.jsx` | browser checks |
 | Text mode, Python and JavaScript styles | `packages/platform/src/text/`, `containers/customized/text-code-panel.jsx` | round trip of every fixture in both dialects + behavior check; browser checks |
-| Git version history (save, diff, open, branches, push) | `packages/platform/src/vcs/`, `containers/customized/history-modal.jsx` | Node test with a real repo; browser checks |
+| Git version history (save, diff, open, download .sb3, branches, push) | `packages/platform/src/vcs/`, `containers/customized/history-modal.jsx` | Node test with a real repo; browser checks |
 | Compatibility suite, Levels 1–3 and the manual checklist (Level 5) | `test/compat/` | 32 tests vs. official npm scratch-vm; 24 files opened in the official GUI built from the upstream tag |
+| AI helper panel (Claude Haiku 5.5 by default, or Sonnet 5.5 / Opus 5.5 from the panel's model picker; user's own API key): reads sprites/scripts/state, sees costumes as pictures, runs the project or one script/loop for a few seconds, reads console errors tagged with the failing block; with Settings > AI helper > "Can also change the project" (off by default) it writes code, creates sprites and draws SVG costumes | `packages/platform/src/assistant/`, `containers/customized/ai-assistant-panel.jsx` | VM tests (`test/vm/assistant.test.ts`); browser checks |
 | GitHub Pages build and deploy, CI | `scripts/build-pages.sh`, `.github/workflows/{ci,pages}.yml` | site served under `/scratch_customized/` with no failed requests |
 
 ### Differences from the plan
@@ -253,6 +259,10 @@ For each release, take 5 key fixtures and:
 - **Mode switches and text edits save and reload the project** (same code path as a real save/load).
 - **Text mode applies on demand** (button or Ctrl/Cmd+Enter) instead of while typing, so half-typed code never
   touches the project. About 90 blocks have a text form; every other block round-trips as `scratch_block(...)`.
+- **Git is the only project format** (no `.sb3` stores): a project's repository lives in the browser, and a folder
+  or Drive keeps a Git bundle of it (desktop Git can `git clone` it). A save that finds the backup changed elsewhere
+  on the same branch keeps the commit locally and does not overwrite the backup (merge is not built yet).
+  `.sb3` files are made only by File > Save to your computer and History > Download .sb3.
 - **Pages path**: the GitHub repository is `scratch_customized`, so the site is at `/scratch_customized/`.
 - Upstream's npm-release, preview-deploy, i18n and bot workflows were removed (they would fail in this fork).
 
@@ -260,8 +270,11 @@ For each release, take 5 key fixtures and:
 - Typing an expression directly into a number slot (use the `ƒ` block for now).
 - Renaming a custom block does not rename its block-local variables; renaming a variable does not update
   expressions that mention it.
-- Git: repositories only in the browser (no local-folder repositories), push only (no pull/merge).
+- Git: push only to GitHub (no pull); no merge yet, so a backup changed on two computers must be saved as a new
+  project. Planned next: a Scratch-aware three-way merge with a per-sprite Resolve dialog, then autosave to the
+  working tree, commit to another branch, and Put aside / Bring back (stash).
 - Compatibility Level 4 (a corpus of ~50 real community projects).
 - Offline service worker (PWA) and an About dialog linking the source (AGPL).
-- Google Drive and the local-folder picker have not been tried live: Drive needs a `GOOGLE_CLIENT_ID`, and the
-  folder picker is a native dialog that automated browsers cannot drive.
+- Google Picker and the local-folder picker have not been tried live (the folder picker is a native dialog that
+  automated browsers cannot drive). Whether Drive `thumbnailLink`s can be fetched from the page (CORS) is unverified;
+  cards fall back to a placeholder if not.

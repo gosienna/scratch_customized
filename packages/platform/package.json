@@ -43,6 +43,7 @@
     "vitest": "4.1.12"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.14.0",
     "@isomorphic-git/lightning-fs": "4.10.5",
     "diff": "9.0.0",
     "idb": "8.0.4",

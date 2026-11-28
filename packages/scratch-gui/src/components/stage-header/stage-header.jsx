@@ -82,6 +82,9 @@ const messages = defineMessages({
 
 const StageHeaderComponent = function (props) {
     const {
+        hideStageSizeToggle,
+        aiAssistantVisible, // CUSTOM
+        onToggleAiAssistant, // CUSTOM
         isFullScreen,
         isPlayerOnly,
         manuallySaveThumbnails,
@@ -259,7 +262,7 @@ const StageHeaderComponent = function (props) {
         );
     } else {
         const stageControls =
-            isPlayerOnly ? (
+            (isPlayerOnly || hideStageSizeToggle) ? ( // CUSTOM: hideStageSizeToggle
                 []
             ) : (
                 <ToggleButtons
@@ -335,6 +338,20 @@ const StageHeaderComponent = function (props) {
                         />
                         {stageControls}
                         <div className={styles.rightSection}>
+                            {/* CUSTOM: opens and closes the AI assistant panel. */}
+                            <Button
+                                aria-pressed={aiAssistantVisible}
+                                className={classNames(styles.stageButton, styles.helperButton, {
+                                    [styles.helperButtonActive]: aiAssistantVisible
+                                })}
+                                onClick={onToggleAiAssistant}
+                            >
+                                <FormattedMessage
+                                    defaultMessage="Helper"
+                                    description="Button beside full screen that opens or closes the AI assistant panel"
+                                    id="gui.stageHeader.aiAssistant"
+                                />
+                            </Button>
                             <Button
                                 className={styles.stageButton}
                                 onClick={handleEnterFullScreen}
@@ -359,6 +376,9 @@ const StageHeaderComponent = function (props) {
 };
 
 StageHeaderComponent.propTypes = {
+    hideStageSizeToggle: PropTypes.bool, // CUSTOM
+    aiAssistantVisible: PropTypes.bool, // CUSTOM
+    onToggleAiAssistant: PropTypes.func, // CUSTOM
     isFullScreen: PropTypes.bool.isRequired,
     isPlayerOnly: PropTypes.bool.isRequired,
     manuallySaveThumbnails: PropTypes.bool,

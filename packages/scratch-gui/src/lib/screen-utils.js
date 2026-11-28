@@ -36,12 +36,29 @@ const resolveStageSize = (stageSizeMode, isFullSize) => {
 };
 
 /**
+ * CUSTOM: pick the stage size enum value matching a user-chosen stage width, so layouts that depend on it
+ * (such as the compact sprite info panel) follow the width.
+ * @param {number} stageWidth - the stage width in pixels.
+ * @returns {STAGE_DISPLAY_SIZES} - the stage size enum value closest to that width.
+ */
+const stageSizeForWidth = stageWidth => {
+    if (stageWidth < layout.standardStageHeight) {
+        return STAGE_DISPLAY_SIZES.small;
+    }
+    if (stageWidth < layout.standardStageWidth) {
+        return STAGE_DISPLAY_SIZES.largeConstrained;
+    }
+    return STAGE_DISPLAY_SIZES.large;
+};
+
+/**
  * Retrieve info used to determine the actual stage size based on the current GUI and browser state.
  * @param {STAGE_DISPLAY_SIZES} stageSize - the current fully-resolved stage size.
  * @param {boolean} isFullScreen - true if full-screen mode is enabled.
+ * @param {number} [stageWidth] - CUSTOM: a width in pixels chosen by the user; overrides `stageSize` when given.
  * @returns {StageDimensions} - an object describing the dimensions of the stage.
  */
-const getStageDimensions = (stageSize, isFullScreen) => {
+const getStageDimensions = (stageSize, isFullScreen, stageWidth) => {
     const stageDimensions = {
         heightDefault: layout.standardStageHeight,
         widthDefault: layout.standardStageWidth,
@@ -63,6 +80,10 @@ const getStageDimensions = (stageSize, isFullScreen) => {
         }
 
         stageDimensions.scale = stageDimensions.width / stageDimensions.widthDefault;
+    } else if (stageWidth) { // CUSTOM
+        stageDimensions.scale = stageWidth / stageDimensions.widthDefault;
+        stageDimensions.height = stageDimensions.scale * stageDimensions.heightDefault;
+        stageDimensions.width = stageWidth;
     } else {
         stageDimensions.scale = STAGE_DISPLAY_SCALES[stageSize];
         stageDimensions.height = stageDimensions.scale * stageDimensions.heightDefault;
@@ -100,5 +121,6 @@ const stageSizeToTransform = ({width, height, widthDefault, heightDefault}) => {
 export {
     getStageDimensions,
     resolveStageSize,
+    stageSizeForWidth,
     stageSizeToTransform
 };

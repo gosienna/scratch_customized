@@ -12,10 +12,7 @@ import VM from '@scratch/scratch-vm';
 
 import Box from '../box/box.jsx';
 import Button from '../button/button.jsx';
-import CommunityButton from './community-button.jsx';
-import ShareButton from './share-button.jsx';
 import {ComingSoonTooltip} from '../coming-soon/coming-soon.jsx';
-import Divider from '../divider/divider.jsx';
 import SaveStatus from './save-status.jsx';
 import ProjectWatcher from '../../containers/project-watcher.jsx';
 import ProjectTitleInput from './project-title-input.jsx';
@@ -57,12 +54,9 @@ import {PLATFORM} from '../../lib/platform';
 
 import styles from './menu-bar.css';
 
-import helpIcon from '../../lib/assets/icon--tutorials.svg';
 import mystuffIcon from './icon--mystuff.png';
 import profileIcon from './icon--profile.png';
 import remixIcon from './icon--remix.svg';
-import dropdownCaret from './dropdown-caret.svg';
-import debugIcon from '../debug-modal/icons/icon--debug.svg';
 
 import scratchLogo from './scratch-logo.svg';
 import scratchLogoAndroid from './scratch-logo-android.svg';
@@ -75,6 +69,11 @@ import sharedMessages from '../../lib/shared-messages';
 
 import {AccountMenuOptionsPropTypes} from '../../lib/account-menu-options';
 import AccountMenu from './account-menu.jsx';
+import {openProjectStorage} from '../../reducers/project-storage'; // CUSTOM
+import VcsBar from '../../containers/customized/vcs-bar.jsx'; // CUSTOM
+import {getProjectStores} from '../../lib/customized/project-stores'; // CUSTOM
+import {signInToGoogle} from '../../lib/customized/google-account'; // CUSTOM
+import log from '../../lib/log'; // CUSTOM
 
 const ariaMessages = defineMessages({
     tutorials: {
@@ -96,6 +95,11 @@ const ariaMessages = defineMessages({
         id: 'gui.menuBar.myStuff',
         defaultMessage: 'My Stuff',
         description: 'accessibility text for the my stuff button'
+    },
+    googleSignIn: { // CUSTOM
+        id: 'gui.customized.menuBar.googleSignIn',
+        defaultMessage: 'Sign in with Google',
+        description: 'Menu bar button for signing in to Google, shown where the signed-in account appears'
     }
 });
 
@@ -161,6 +165,7 @@ class MenuBar extends React.Component {
             'handleClickNew',
             'handleClickSeeCommunity',
             'handleClickShare',
+            'handleClickGoogleSignIn', // CUSTOM
             'handleSetMode',
             'handleKeyPress',
             'handleRestoreOption',
@@ -173,6 +178,10 @@ class MenuBar extends React.Component {
     }
     componentWillUnmount () {
         document.removeEventListener('keydown', this.handleKeyPress);
+    }
+    // CUSTOM
+    handleClickGoogleSignIn () {
+        this.props.onSignInToGoogle().catch(e => log.warn('MenuBar: Google sign-in was not completed', e));
     }
     handleClickNew () {
         // if the project is dirty, and user owns the project, we will autosave.
@@ -400,92 +409,12 @@ class MenuBar extends React.Component {
                             avatarBadge={this.props.authorAvatarBadge}
                         />
                     ) : null)}
+                    {/* CUSTOM: the branch the next commit goes to, and the Commit button. */}
+                    <VcsBar />
                     <div className={classNames(styles.menuBarItem)}>
-                        {this.props.canShare ? (
-                            (this.props.isShowingProject || this.props.isUpdating) && (
-                                <ProjectWatcher
-                                    onDoneUpdating={this.props.onSeeCommunity}
-                                    isShared={this.props.isShared}
-                                >
-                                    {
-                                        waitForUpdate => (
-                                            <ShareButton
-                                                className={styles.menuBarButton}
-                                                isShared={this.props.isShared}
-                                                /* eslint-disable react/jsx-no-bind */
-                                                onClick={() => {
-                                                    this.handleClickShare(waitForUpdate);
-                                                }}
-                                                /* eslint-enable react/jsx-no-bind */
-                                            />
-                                        )
-                                    }
-                                </ProjectWatcher>
-                            )
-                        ) : (
-                            this.props.showComingSoon ? (
-                                <MenuBarItemTooltip id="share-button">
-                                    <ShareButton className={styles.menuBarButton} />
-                                </MenuBarItemTooltip>
-                            ) : []
-                        )}
                         {this.props.canRemix ? remixButton : []}
                     </div>
-                    <div className={classNames(styles.menuBarItem, styles.communityButtonWrapper)}>
-                        {this.props.enableCommunity ? (
-                            (this.props.isShowingProject || this.props.isUpdating) && (
-                                <ProjectWatcher onDoneUpdating={this.props.onSeeCommunity}>
-                                    {
-                                        waitForUpdate => (
-                                            <CommunityButton
-                                                className={styles.menuBarButton}
-                                                /* eslint-disable react/jsx-no-bind */
-                                                onClick={() => {
-                                                    this.handleClickSeeCommunity(waitForUpdate);
-                                                }}
-                                                /* eslint-enable react/jsx-no-bind */
-                                            />
-                                        )
-                                    }
-                                </ProjectWatcher>
-                            )
-                        ) : (this.props.showComingSoon ? (
-                            <MenuBarItemTooltip id="community-button">
-                                <CommunityButton className={styles.menuBarButton} />
-                            </MenuBarItemTooltip>
-                        ) : [])}
-                    </div>
-                    <Divider className={classNames(styles.divider)} />
-                    <div className={styles.fileGroup}>
-                        <button
-                            aria-label={this.props.intl.formatMessage(ariaMessages.tutorials)}
-                            className={
-                                classNames(styles.menuBarItem, styles.noOffset, styles.hoverable, 'tutorials-button')
-                            }
-                            onClick={this.props.onOpenTipLibrary}
-                        >
-                            <img
-                                className={styles.helpIcon}
-                                src={helpIcon}
-                            />
-                            <span className={styles.tutorialsLabel}>
-                                <FormattedMessage {...ariaMessages.tutorials} />
-                            </span>
-                        </button>
-                        <button
-                            aria-label={this.props.intl.formatMessage(ariaMessages.debug)}
-                            className={classNames(styles.menuBarItem, styles.noOffset, styles.hoverable)}
-                            onClick={this.props.onOpenDebugModal}
-                        >
-                            <img
-                                className={styles.helpIcon}
-                                src={debugIcon}
-                            />
-                            <span className={styles.debugLabel}>
-                                <FormattedMessage {...ariaMessages.debug} />
-                            </span>
-                        </button>
-                    </div>
+                    {/* CUSTOM: no Share, See Project Page, Tutorials or Debug buttons. */}
                 </div>
 
                 {/* show the proper UI in the account menu, given whether the user is
@@ -582,44 +511,51 @@ class MenuBar extends React.Component {
                         <React.Fragment>
                             {this.props.showComingSoon ? (
                                 <React.Fragment>
-                                    <MenuBarItemTooltip id="mystuff">
-                                        <div
-                                            className={classNames(
-                                                styles.menuBarItem,
-                                                styles.hoverable,
-                                                styles.mystuffButton
-                                            )}
-                                        >
-                                            <img
-                                                className={styles.mystuffIcon}
-                                                src={mystuffIcon}
-                                            />
-                                        </div>
-                                    </MenuBarItemTooltip>
-                                    <MenuBarItemTooltip
-                                        id="account-nav"
-                                        place={this.props.isRtl ? 'right' : 'left'}
+                                    {/* CUSTOM: the folder icon opens the My Projects page. */}
+                                    <button
+                                        aria-label={this.props.intl.formatMessage(ariaMessages.myStuff)}
+                                        className={classNames(
+                                            styles.menuBarItem,
+                                            styles.hoverable,
+                                            styles.mystuffButton
+                                        )}
+                                        onClick={this.props.onClickMyProjects}
                                     >
-                                        <div
+                                        <img
+                                            className={styles.mystuffIcon}
+                                            src={mystuffIcon}
+                                        />
+                                    </button>
+                                    {/* CUSTOM: the Google account signed in for Drive backups. */}
+                                    {this.props.googleAccount ? (
+                                        <button
                                             className={classNames(
                                                 styles.menuBarItem,
                                                 styles.hoverable,
                                                 styles.accountNavMenu
                                             )}
+                                            title={`${this.props.googleAccount.name}\n${
+                                                this.props.googleAccount.email}`}
+                                            onClick={this.props.onClickMyProjects}
                                         >
                                             <img
                                                 className={styles.profileIcon}
-                                                src={profileIcon}
+                                                src={this.props.googleAccount.photoUrl || profileIcon}
+                                                referrerPolicy="no-referrer"
+                                                alt=""
                                             />
-                                            <span>
-                                                {'scratch-cat'}
+                                            <span className={styles.accountEmail}>
+                                                {this.props.googleAccount.email}
                                             </span>
-                                            <img
-                                                className={styles.dropdownCaretIcon}
-                                                src={dropdownCaret}
-                                            />
-                                        </div>
-                                    </MenuBarItemTooltip>
+                                        </button>
+                                    ) : (getProjectStores().drive && (
+                                        <button
+                                            className={classNames(styles.menuBarItem, styles.hoverable)}
+                                            onClick={this.handleClickGoogleSignIn}
+                                        >
+                                            <FormattedMessage {...ariaMessages.googleSignIn} />
+                                        </button>
+                                    ))}
                                 </React.Fragment>
                             ) : []}
                         </React.Fragment>
@@ -690,6 +626,13 @@ MenuBar.propTypes = {
     onClickMode: PropTypes.func,
     onClickNew: PropTypes.func,
     onClickRemix: PropTypes.func,
+    onClickMyProjects: PropTypes.func, // CUSTOM
+    onSignInToGoogle: PropTypes.func, // CUSTOM
+    googleAccount: PropTypes.shape({ // CUSTOM
+        name: PropTypes.string,
+        email: PropTypes.string,
+        photoUrl: PropTypes.string
+    }),
     onClickSave: PropTypes.func,
     onClickSaveAsCopy: PropTypes.func,
     onLogOut: PropTypes.func,
@@ -736,6 +679,7 @@ const mapStateToProps = (state, ownProps) => {
         locale: state.locales.locale,
         loginMenuOpen: loginMenuOpen(state),
         projectTitle: state.scratchGui.projectTitle,
+        googleAccount: state.scratchGui.projectStorage.googleAccount, // CUSTOM
         username: ownProps.username ?? (user ? user.username : null),
         avatarBadge: ownProps.avatarBadge ?? (user ? user.membership_avatar_badge : null),
         userIsEducator: permissions && permissions.educator,
@@ -776,6 +720,8 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     onClickNew: needSave => dispatch(requestNewProject(needSave)),
     onClickLogin: ownProps.onClickLogin ?? (() => dispatch(openLoginMenu())),
     onClickSave: () => dispatch(manualUpdateProject()),
+    onClickMyProjects: () => dispatch(openProjectStorage('projects')), // CUSTOM
+    onSignInToGoogle: () => signInToGoogle(dispatch), // CUSTOM
     onClickRemix: () => dispatch(remixProject()),
     onRequestCloseLogin: () => dispatch(closeLoginMenu()),
     onSeeCommunity: ownProps.onSeeCommunity ?? (() => dispatch(setPlayer(true))),

@@ -17,6 +17,7 @@ $z-index-tooltip-overlay: 481;
 $z-index-tooltip: 490;
 $z-index-alerts: 490;
 $z-index-menu-bar: 491; /* menu-bar should go over monitors, alerts, tooltips and tutorials */
+$z-index-project-library: 495; /* CUSTOM: the My Projects page covers the editor, below the loader and modals */
 $z-index-loader: 500;
 $z-index-modal-overlay: 501;
 $z-index-modal: 510;

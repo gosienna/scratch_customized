@@ -11,6 +11,7 @@ StageWrapper.propTypes = {
     ariaRole: PropTypes.string,
     isRendererSupported: PropTypes.bool.isRequired,
     stageSize: PropTypes.oneOf(Object.keys(STAGE_DISPLAY_SIZES)).isRequired,
+    stageWidth: PropTypes.number, // CUSTOM
     vm: PropTypes.instanceOf(VM).isRequired
 };
 

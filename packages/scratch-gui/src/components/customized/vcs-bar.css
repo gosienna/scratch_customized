@@ -1,0 +1,163 @@
+@import "../../css/colors.css";
+
+.bar {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0 0.25rem;
+    min-width: 0;
+}
+
+.anchor {
+    position: relative;
+}
+
+.chip, .chip-unsaved, .commit {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    height: 2rem;
+    padding: 0 0.625rem;
+    border: 1px solid $ui-white-transparent;
+    border-radius: 1rem;
+    background: $ui-black-transparent;
+    color: $ui-white;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: bold;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.chip-unsaved {
+    color: $ui-white-dim;
+    font-weight: normal;
+}
+
+.chip:hover, .chip-unsaved:hover, .commit:hover:not(:disabled) {
+    background: $ui-white-transparent;
+}
+
+.commit {
+    background: $ui-white;
+    color: $looks-secondary;
+}
+
+.commit:hover:not(:disabled) {
+    background: $ui-primary;
+}
+
+.commit:disabled {
+    background: $ui-white-transparent;
+    color: $ui-white-dim;
+    cursor: default;
+}
+
+.dot {
+    color: $ui-orange;
+}
+
+.menu, .popover {
+    position: absolute;
+    top: calc(100% + 0.375rem);
+    left: 0;
+    z-index: 1;
+    margin: 0;
+    padding: 0.25rem 0;
+    min-width: 12rem;
+    border-radius: 0.5rem;
+    background: $ui-white;
+    color: $text-primary;
+    box-shadow: 0 0.25rem 1rem $ui-black-transparent;
+    list-style: none;
+}
+
+.separator {
+    margin-top: 0.25rem;
+    padding-top: 0.25rem;
+    border-top: 1px solid $ui-black-transparent;
+}
+
+.menu-item {
+    display: flex;
+    width: 100%;
+    padding: 0.4rem 0.75rem;
+    border: none;
+    background: none;
+    color: inherit;
+    font-family: inherit;
+    font-size: 0.8rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.menu-item:hover:not(:disabled) {
+    background: $ui-secondary;
+}
+
+.menu-item:disabled {
+    color: $text-primary-transparent;
+    cursor: default;
+}
+
+.check {
+    display: inline-block;
+    width: 1.25rem;
+    color: $looks-secondary;
+}
+
+.popover {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    min-width: 18rem;
+}
+
+.popover input {
+    padding: 0.5rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.25rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+}
+
+.popover-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.primary, .secondary {
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.25rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.primary {
+    border: none;
+    background: $looks-secondary;
+    color: $ui-white;
+}
+
+.secondary {
+    border: 1px solid $ui-black-transparent;
+    background: $ui-white;
+    color: $text-primary;
+}
+
+.status, .status-error {
+    overflow: hidden;
+    max-width: 16rem;
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: $ui-white-dim;
+}
+
+.status-error {
+    color: $ui-alert-orange;
+}

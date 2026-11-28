@@ -49,11 +49,6 @@ describe('Menu bar settings', () => {
         await findByXpath('//*[li[span[text()="Save to your computer"]] and not(@data-tip="tooltip")]');
     });
 
-    test('Share button should NOT be enabled', async () => {
-        await loadUri(uri);
-        await findByXpath('//div[button[div[span[text()="Share"]]] and @data-tip="tooltip"]');
-    });
-
     test('Logo should be clickable', async () => {
         await loadUri(uri);
         await clickXpath('//img[@alt="Scratch"]');
