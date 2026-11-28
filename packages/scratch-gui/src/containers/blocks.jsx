@@ -42,6 +42,7 @@ import {
 } from '../reducers/editor-tab';
 // CUSTOM
 import {makeVariablesCategory, setupWorkspace} from '../lib/customized/blocks';
+import {setMainWorkspace} from '../lib/customized/main-workspace'; // CUSTOM
 
 const addFunctionListener = (object, property, callback) => {
     const oldFn = object[property];
@@ -127,6 +128,7 @@ class Blocks extends React.Component {
         this.workspace = this.ScratchBlocks.inject(this.blocks, workspaceConfig);
         // CUSTOM: scope colors, and a Variables palette grouped by scope in Custom mode.
         setupWorkspace(this.ScratchBlocks, this.workspace);
+        setMainWorkspace(this.workspace); // CUSTOM: lets the AI helper scroll the code area
         this.workspace.registerToolboxCategoryCallback(
             'VARIABLE',
             makeVariablesCategory(this.ScratchBlocks)
@@ -259,6 +261,7 @@ class Blocks extends React.Component {
         this.ScratchBlocks.WidgetDiv.hide();
         this.ScratchBlocks.getFocusManager().focusNode(this.workspace);
         this.workspace.dispose();
+        setMainWorkspace(null); // CUSTOM
         clearTimeout(this.toolboxUpdateTimeout);
 
         // Clear the flyout blocks so that they can be recreated on mount.

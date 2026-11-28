@@ -6,7 +6,7 @@ import type Anthropic from '@anthropic-ai/sdk'
 import { type ConsoleCapture } from './console-capture'
 import { describeProject } from './project-summary'
 import { ASSISTANT_SYSTEM_PROMPT, turnContext } from './system-prompt'
-import { type ProjectEditor, runTool, type ToolContext, type ToolOutput, toolsFor } from './tools'
+import { type EditorView, type ProjectEditor, runTool, type ToolContext, type ToolOutput, toolsFor } from './tools'
 import type { AssistantVm } from './vm-types'
 
 /** The Claude models the learner can choose from; Haiku is the default. */
@@ -102,6 +102,8 @@ export interface AssistantOptions {
   renderCostume?: ToolContext['renderCostume']
   /** The editor to change the project with, or null while editing is off. Read on every message. */
   editor?: () => ProjectEditor | null | undefined
+  /** The editor's view, which the assistant can move to show the learner a sprite or a place in the code. */
+  view?: () => EditorView | null | undefined
 }
 
 export interface Assistant {
@@ -134,6 +136,7 @@ export const createAssistant = (options: AssistantOptions): Assistant => {
         runOptions: options.runOptions,
         renderCostume: options.renderCostume,
         editor,
+        view: options.view?.() ?? undefined,
       })
       result = { ok: true, ...output }
     } catch (error) {
@@ -190,7 +193,7 @@ export const createAssistant = (options: AssistantOptions): Assistant => {
             max_tokens: 64000,
             cache_control: { type: 'ephemeral' },
             system: ASSISTANT_SYSTEM_PROMPT,
-            tools: toolsFor(Boolean(editor)),
+            tools: toolsFor(Boolean(editor), Boolean(options.view?.())),
             messages,
           },
           { signal },

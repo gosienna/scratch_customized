@@ -18,7 +18,30 @@ export interface ProjectEditor {
   createSprite: (name: string, costume: { name: string; svg: string }) => Promise<void>
   /** Add a costume to a sprite, or a backdrop to "Stage", and switch to it. */
   addCostume: (sprite: string, costume: { name: string; svg: string }) => Promise<void>
+  /** Add a comment to a sprite's workspace, attached to a block when blockId is given. Returns the comment's id. */
+  addComment: (sprite: string, comment: CommentRequest) => Promise<string>
 }
+
+export interface CommentRequest {
+  text: string
+  blockId: string | null
+  /** Workspace position; chosen by the editor when left out. */
+  x?: number
+  y?: number
+}
+
+/** A place on a sprite's workspace: a block, or a point in workspace coordinates. */
+export type WorkspacePlace = { blockId: string } | { x: number; y: number }
+
+/** Moves the learner's view of the editor; it does not change the project. */
+export interface EditorView {
+  /** Select a sprite, or "Stage", in the editor. */
+  openSprite: (sprite: string) => Promise<void>
+  /** Open the sprite's code and scroll the code area to the place. Not shown when the blocks are hidden. */
+  showInWorkspace: (sprite: string, place: WorkspacePlace) => Promise<{ shown: boolean; reason?: string }>
+}
+
+const nullable = (schema: Record<string, unknown>) => ({ anyOf: [schema, { type: 'null' }] })
 
 const svgProperty = {
   type: 'string',
@@ -79,13 +102,71 @@ export const EDIT_TOOLS: Anthropic.Tool[] = [
     },
     strict: true,
   },
+  {
+    name: 'add_comment',
+    description:
+      "Add a comment (a yellow note) to a sprite's (or the Stage's) code. With block_id it is attached to that block; " +
+      'with block_id null it sits on its own on the workspace at x, y (null x and y put it next to the scripts). ' +
+      'Use block ids from get_sprite_scripts. Returns the new comment id.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        sprite: { type: 'string', description: 'Sprite name, or "Stage".' },
+        text: { type: 'string', description: 'The comment text. Keep it short and friendly.' },
+        block_id: nullable({ type: 'string', description: 'Id of the block to attach it to, or null.' }),
+        x: nullable({ type: 'number', description: 'Workspace x, or null to place it automatically.' }),
+        y: nullable({ type: 'number', description: 'Workspace y, or null to place it automatically.' }),
+      },
+      required: ['sprite', 'text', 'block_id', 'x', 'y'],
+      additionalProperties: false,
+    },
+    strict: true,
+  },
+]
+
+/** Tools that move the learner's view of the editor without changing the project. */
+export const VIEW_TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'open_sprite',
+    description: 'Select a sprite (or the Stage) in the editor, as when the learner clicks it in the sprite list.',
+    input_schema: {
+      type: 'object',
+      properties: { sprite: { type: 'string', description: 'Sprite name, or "Stage".' } },
+      required: ['sprite'],
+      additionalProperties: false,
+    },
+    strict: true,
+  },
+  {
+    name: 'show_in_workspace',
+    description:
+      "Point the learner at code: open the sprite's Code tab and scroll the code area so a block (block_id) or a " +
+      'workspace point (x and y, as in "@pos") is in the middle. Give either block_id or x and y; set the others to ' +
+      'null. Does not work in Text mode, where the blocks are hidden.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        sprite: { type: 'string', description: 'Sprite name, or "Stage".' },
+        block_id: nullable({ type: 'string', description: 'Id from get_sprite_scripts, or null.' }),
+        x: nullable({ type: 'number', description: 'Workspace x, or null.' }),
+        y: nullable({ type: 'number', description: 'Workspace y, or null.' }),
+      },
+      required: ['sprite', 'block_id', 'x', 'y'],
+      additionalProperties: false,
+    },
+    strict: true,
+  },
 ]
 
 const EDIT_TOOL_NAMES = new Set(EDIT_TOOLS.map((tool) => tool.name))
+const VIEW_TOOL_NAMES = new Set(VIEW_TOOLS.map((tool) => tool.name))
 
-/** The tools to offer: the edit tools only while editing is on. */
-export const toolsFor = (canEdit: boolean): Anthropic.Tool[] =>
-  canEdit ? [...ASSISTANT_TOOLS, ...EDIT_TOOLS] : ASSISTANT_TOOLS
+/** The tools to offer: the edit tools only while editing is on, the view tools only when there is a view. */
+export const toolsFor = (canEdit: boolean, canView = false): Anthropic.Tool[] => [
+  ...ASSISTANT_TOOLS,
+  ...(canView ? VIEW_TOOLS : []),
+  ...(canEdit ? EDIT_TOOLS : []),
+]
 
 export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   {
@@ -185,6 +266,8 @@ export interface ToolContext {
   renderCostume?: CostumeRenderer
   /** Present only while the learner has turned editing on. */
   editor?: ProjectEditor
+  /** The editor's view, when there is one to move (not in tests without a GUI). */
+  view?: EditorView
 }
 
 /** What a tool call returns: text for Claude, and for some tools a picture. */
@@ -203,6 +286,18 @@ const asNumber = (input: Record<string, unknown>, key: string): number => {
   const value = input[key]
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`"${key}" must be a number`)
   return value
+}
+
+const optionalNumber = (input: Record<string, unknown>, key: string): number | undefined =>
+  input[key] === null || input[key] === undefined ? undefined : asNumber(input, key)
+
+const optionalString = (input: Record<string, unknown>, key: string): string | null =>
+  input[key] === null || input[key] === undefined ? null : asString(input, key)
+
+const checkBlock = (vm: AssistantVm, sprite: string, blockId: string): void => {
+  if (!findTarget(vm, sprite).blocks.getBlock(blockId)) {
+    throw new Error(`"${sprite}" has no block with id "${blockId}". Block ids are in get_sprite_scripts`)
+  }
 }
 
 const costumeOutput = async (context: ToolContext, sprite: string, name: string): Promise<ToolOutput> => {
@@ -252,8 +347,51 @@ const runEditTool = async (
       const added = findTarget(vm, sprite).getCostumes().at(-1)
       return json({ added: added?.name ?? costume, sprite, costumes: target.getCostumes().map((c) => c.name) })
     }
+    case 'add_comment': {
+      const sprite = asString(input, 'sprite')
+      findTarget(vm, sprite)
+      const blockId = optionalString(input, 'block_id')
+      if (blockId) checkBlock(vm, sprite, blockId)
+      const x = optionalNumber(input, 'x')
+      const y = optionalNumber(input, 'y')
+      const id = await editor.addComment(sprite, {
+        text: asString(input, 'text'),
+        blockId,
+        ...(x === undefined ? {} : { x }),
+        ...(y === undefined ? {} : { y }),
+      })
+      return json({ added: id, sprite, attachedTo: blockId })
+    }
     default:
       throw new Error(`Unknown edit tool "${name}"`)
+  }
+}
+
+const runViewTool = async (
+  view: EditorView,
+  name: string,
+  input: Record<string, unknown>,
+  vm: AssistantVm,
+): Promise<ToolOutput> => {
+  const sprite = asString(input, 'sprite')
+  findTarget(vm, sprite)
+  switch (name) {
+    case 'open_sprite':
+      await view.openSprite(sprite)
+      return json({ opened: sprite })
+    case 'show_in_workspace': {
+      const blockId = optionalString(input, 'block_id')
+      const x = optionalNumber(input, 'x')
+      const y = optionalNumber(input, 'y')
+      let place: WorkspacePlace
+      if (blockId && x === undefined && y === undefined) place = { blockId }
+      else if (!blockId && x !== undefined && y !== undefined) place = { x, y }
+      else throw new Error('Give either block_id, or both x and y (set the others to null)')
+      if (blockId) checkBlock(vm, sprite, blockId)
+      return json({ sprite, ...place, ...(await view.showInWorkspace(sprite, place)) })
+    }
+    default:
+      throw new Error(`Unknown view tool "${name}"`)
   }
 }
 
@@ -267,6 +405,10 @@ export const runTool = async (
   if (EDIT_TOOL_NAMES.has(name)) {
     if (!context.editor) throw new Error('Editing is turned off in Settings, so the project cannot be changed')
     return runEditTool(context.editor, name, input, vm)
+  }
+  if (VIEW_TOOL_NAMES.has(name)) {
+    if (!context.view) throw new Error('The editor view is not available, so it cannot be moved')
+    return runViewTool(context.view, name, input, vm)
   }
   const runOptions = { ...context.runOptions, capture: context.capture, signal: context.signal }
   switch (name) {

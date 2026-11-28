@@ -4,7 +4,8 @@ import { ASSISTANT_MODELS, createAssistant, type AssistantClient } from '../../s
 import { ConsoleCapture } from '../../src/assistant/console-capture'
 import { describeProject, describeScripts } from '../../src/assistant/project-summary'
 import { type RunClock, runProject, runScript } from '../../src/assistant/run'
-import { type ProjectEditor, runTool } from '../../src/assistant/tools'
+import { type EditorView, type ProjectEditor, runTool, type WorkspacePlace } from '../../src/assistant/tools'
+import { lowerProject } from '../../src/compat/lower'
 import { applyText, TextSyntaxError } from '../../src/text'
 import { project, target } from '../helpers'
 import { createVm, type VM } from './vm-helpers'
@@ -341,6 +342,14 @@ describe('editing', () => {
         calls.push(`costume ${sprite} ${costume.name}`)
         return Promise.resolve()
       },
+      addComment: (sprite, comment) => {
+        const id = `comment${calls.length}`
+        calls.push(`comment ${sprite} ${comment.blockId}`)
+        vm.runtime
+          .getSpriteTargetByName(sprite)
+          .createComment(id, comment.blockId, comment.text, comment.x ?? 0, comment.y ?? 0, 200, 200, false)
+        return Promise.resolve(id)
+      },
     }
   }
 
@@ -412,5 +421,98 @@ describe('editing', () => {
     expect(names[1]).not.toContain('set_sprite_code')
     expect(requests[0].messages[0].content[0].text).toContain('Editing: on')
     expect(requests[1].messages[2].content[0].text).toContain('Editing: off')
+  })
+
+  test('add_comment attaches a comment that is saved as a stock comment', async () => {
+    const vm = await loadVm()
+    const editor = codeEditor(vm)
+    const [script] = describeScripts(vm, 'Cat')
+    const output = await runTool(
+      'add_comment',
+      { sprite: 'Cat', text: 'Counts to 5', block_id: script.id, x: null, y: null },
+      { vm, editor },
+    )
+    const result = JSON.parse(output.text) as { added: string; attachedTo: string }
+    expect(result.attachedTo).toBe(script.id)
+    const saved = lowerProject(JSON.parse(vm.toJSON()))
+    const cat = saved.targets.find((candidate: { name: string }) => candidate.name === 'Cat')
+    expect(cat.comments[result.added]).toMatchObject({ blockId: script.id, text: 'Counts to 5' })
+    expect(cat.blocks[script.id].comment).toBe(result.added)
+  })
+
+  test('add_comment refuses an unknown block and is refused while editing is off', async () => {
+    const vm = await loadVm()
+    const input = { sprite: 'Cat', text: 'Hi', block_id: 'nope', x: null, y: null }
+    await expect(runTool('add_comment', input, { vm, editor: codeEditor(vm) })).rejects.toThrow(
+      '"Cat" has no block with id "nope"',
+    )
+    await expect(runTool('add_comment', { ...input, block_id: null }, { vm })).rejects.toThrow(
+      'Editing is turned off in Settings',
+    )
+  })
+})
+
+describe('editor view', () => {
+  const fakeView = (): EditorView & { calls: string[] } => {
+    const calls: string[] = []
+    return {
+      calls,
+      openSprite: (sprite) => {
+        calls.push(`open ${sprite}`)
+        return Promise.resolve()
+      },
+      showInWorkspace: (sprite, place: WorkspacePlace) => {
+        calls.push(`show ${sprite} ${JSON.stringify(place)}`)
+        return Promise.resolve({ shown: true })
+      },
+    }
+  }
+
+  test('open_sprite and show_in_workspace go to the view', async () => {
+    const vm = await loadVm()
+    const view = fakeView()
+    const [script] = describeScripts(vm, 'Cat')
+    await runTool('open_sprite', { sprite: 'Stage' }, { vm, view })
+    const output = await runTool(
+      'show_in_workspace',
+      { sprite: 'Cat', block_id: script.id, x: null, y: null },
+      { vm, view },
+    )
+    await runTool('show_in_workspace', { sprite: 'Cat', block_id: null, x: 10, y: -20 }, { vm, view })
+    expect(JSON.parse(output.text)).toMatchObject({ sprite: 'Cat', blockId: script.id, shown: true })
+    expect(view.calls).toEqual(['open Stage', `show Cat {"blockId":"${script.id}"}`, 'show Cat {"x":10,"y":-20}'])
+  })
+
+  test('show_in_workspace needs either a block or a point', async () => {
+    const vm = await loadVm()
+    const view = fakeView()
+    const [script] = describeScripts(vm, 'Cat')
+    const message = 'Give either block_id, or both x and y'
+    await expect(
+      runTool('show_in_workspace', { sprite: 'Cat', block_id: null, x: null, y: null }, { vm, view }),
+    ).rejects.toThrow(message)
+    await expect(
+      runTool('show_in_workspace', { sprite: 'Cat', block_id: null, x: 5, y: null }, { vm, view }),
+    ).rejects.toThrow(message)
+    await expect(
+      runTool('show_in_workspace', { sprite: 'Cat', block_id: script.id, x: 5, y: 5 }, { vm, view }),
+    ).rejects.toThrow(message)
+    await expect(runTool('open_sprite', { sprite: 'Dog' }, { vm, view })).rejects.toThrow(
+      'There is no sprite named "Dog"',
+    )
+    await expect(runTool('open_sprite', { sprite: 'Cat' }, { vm })).rejects.toThrow(
+      'The editor view is not available',
+    )
+    expect(view.calls).toEqual([])
+  })
+
+  test('the view tools are offered only when a view is given', async () => {
+    const vm = await loadVm()
+    const requests: { tools: { name: string }[] }[] = []
+    await createAssistant({ vm, client: recordingClient(requests), capture, view: () => fakeView() }).send('Where?')
+    await createAssistant({ vm, client: recordingClient(requests), capture }).send('Where?')
+    const names = requests.map((request) => request.tools.map((tool) => tool.name))
+    expect(names[0]).toEqual(expect.arrayContaining(['open_sprite', 'show_in_workspace']))
+    expect(names[1]).not.toContain('open_sprite')
   })
 })

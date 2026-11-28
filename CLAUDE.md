@@ -26,8 +26,9 @@ editor-only feature needs a lowering, a raising rule, and a runtime that behaves
   one-file backup). The GUI imports its **built** `dist/`.
 - AI helper: `containers/customized/ai-assistant-panel.jsx` (chat panel, toggled by the menu bar's Helper button,
   `reducers/ai-assistant.js`). It calls the Anthropic API from the browser with a key each user pastes (kept in
-  localStorage), with a model picker in the panel (Haiku 5.5 default, Sonnet 5.5, Opus 5.5). It reads, test-runs and sees costumes; it changes the project (code via `applyText`, new sprites
-  and SVG costumes, `lib/customized/ai-project-editor.js`) only when Settings > AI helper is set to "Can also change
+  localStorage), with a model picker in the panel (Haiku 5.5 default, Sonnet 5.5, Opus 5.5). It reads, test-runs and sees costumes, and can select a sprite and scroll the code area to a
+  block (`lib/customized/ai-editor-view.js`); it changes the project (code via `applyText`, new sprites, SVG costumes
+  and comments, `lib/customized/ai-project-editor.js`) only when Settings > AI helper is set to "Can also change
   the project" (off by default).
 - Projects are Git repositories in the browser (LightningFS); Save = commit. `scratch-gui/src/lib/customized/
   project-repo.js` commits, backs up and opens projects; a `.sb3` is only ever made on export.

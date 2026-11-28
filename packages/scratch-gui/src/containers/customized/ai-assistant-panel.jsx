@@ -7,8 +7,10 @@ import {defineMessages, FormattedMessage, useIntl} from 'react-intl';
 import {connect} from 'react-redux';
 import {ASSISTANT_MODELS, createAssistant} from '@scratch-customized/platform';
 
+import {createEditorView} from '../../lib/customized/ai-editor-view';
 import {createProjectEditor} from '../../lib/customized/ai-project-editor';
 import {setAiAssistantVisible} from '../../reducers/ai-assistant';
+import {activateTab, BLOCKS_TAB_INDEX} from '../../reducers/editor-tab';
 import {setProjectChanged} from '../../reducers/project-changed';
 
 import styles from './ai-assistant-panel.css';
@@ -135,6 +137,21 @@ const messages = defineMessages({
         defaultMessage: 'Added costume "{name}" to {sprite}',
         description: 'Tool call row'
     },
+    toolAddComment: {
+        id: 'gui.customized.ai.tool.addComment',
+        defaultMessage: 'Added a comment to {sprite}',
+        description: 'Tool call row'
+    },
+    toolOpenSprite: {
+        id: 'gui.customized.ai.tool.openSprite',
+        defaultMessage: 'Opened {sprite}',
+        description: 'Tool call row'
+    },
+    toolShowCode: {
+        id: 'gui.customized.ai.tool.showCode',
+        defaultMessage: 'Showed you code in {sprite}',
+        description: 'Tool call row'
+    },
     toolCostume: {
         id: 'gui.customized.ai.tool.costume',
         defaultMessage: 'Looked at costume "{costume}" of {sprite}',
@@ -236,6 +253,9 @@ const toolLabel = (intl, {name, input}) => {
     case 'set_sprite_code': return intl.formatMessage(messages.toolSetCode, {sprite: input.sprite});
     case 'create_sprite': return intl.formatMessage(messages.toolCreateSprite, {name: input.name});
     case 'add_costume': return intl.formatMessage(messages.toolAddCostume, {name: input.name, sprite: input.sprite});
+    case 'add_comment': return intl.formatMessage(messages.toolAddComment, {sprite: input.sprite});
+    case 'open_sprite': return intl.formatMessage(messages.toolOpenSprite, {sprite: input.sprite});
+    case 'show_in_workspace': return intl.formatMessage(messages.toolShowCode, {sprite: input.sprite});
     case 'run_project': return intl.formatMessage(messages.toolRunProject, {seconds: input.seconds});
     case 'run_script':
         return intl.formatMessage(messages.toolRunScript, {sprite: input.sprite, seconds: input.seconds});
@@ -428,7 +448,7 @@ ChatItem.propTypes = {
     }).isRequired
 };
 
-const AiAssistantPanel = ({canEdit, editorMode, onClose, onProjectChanged, vm}) => {
+const AiAssistantPanel = ({canEdit, editorMode, onActivateBlocksTab, onClose, onProjectChanged, vm}) => {
     const intl = useIntl();
     const [apiKey, setApiKey] = useState(readApiKey);
     const [editingKey, setEditingKey] = useState(!apiKey);
@@ -451,15 +471,22 @@ const AiAssistantPanel = ({canEdit, editorMode, onClose, onProjectChanged, vm}) 
     }, []);
     const onProjectChangedRef = useRef(onProjectChanged);
     onProjectChangedRef.current = onProjectChanged;
+    const onActivateBlocksTabRef = useRef(onActivateBlocksTab);
+    onActivateBlocksTabRef.current = onActivateBlocksTab;
 
     useEffect(() => {
         const editor = createProjectEditor(vm, () => onProjectChangedRef.current());
+        const view = createEditorView(vm, {
+            activateBlocksTab: () => onActivateBlocksTabRef.current(),
+            editorMode: () => editorModeRef.current
+        });
         assistantRef.current = apiKey ? createAssistant({
             apiKey,
             vm,
             editorMode: () => editorModeRef.current,
             model: () => ASSISTANT_MODELS[modelRef.current],
-            editor: () => (canEditRef.current ? editor : null)
+            editor: () => (canEditRef.current ? editor : null),
+            view: () => view
         }) : null;
         return () => assistantRef.current?.abort();
     }, [apiKey, vm]);
@@ -643,6 +670,7 @@ const AiAssistantPanel = ({canEdit, editorMode, onClose, onProjectChanged, vm}) 
 AiAssistantPanel.propTypes = {
     canEdit: PropTypes.bool.isRequired,
     editorMode: PropTypes.string.isRequired,
+    onActivateBlocksTab: PropTypes.func.isRequired,
     onClose: PropTypes.func.isRequired,
     onProjectChanged: PropTypes.func.isRequired,
     vm: PropTypes.object.isRequired // eslint-disable-line react/forbid-prop-types
@@ -655,6 +683,7 @@ const mapStateToProps = state => ({
 });
 
 const mapDispatchToProps = dispatch => ({
+    onActivateBlocksTab: () => dispatch(activateTab(BLOCKS_TAB_INDEX)),
     onClose: () => dispatch(setAiAssistantVisible(false)),
     onProjectChanged: () => dispatch(setProjectChanged())
 });
